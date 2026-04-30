@@ -1,0 +1,206 @@
+{
+  "id": "ea6c8f75-ba2f-4821-8da8-3f29607f5cec",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.locations": {
+      "name": "locations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(16)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.readings": {
+      "name": "readings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "char(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution": {
+          "name": "resolution",
+          "type": "char(3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_at": {
+          "name": "valid_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "temp_c": {
+          "name": "temp_c",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "temp_min_c": {
+          "name": "temp_min_c",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "temp_max_c": {
+          "name": "temp_max_c",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rh_pct": {
+          "name": "rh_pct",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "msl_hpa": {
+          "name": "msl_hpa",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wind_kmh": {
+          "name": "wind_kmh",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gust_kmh": {
+          "name": "gust_kmh",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wind_dir": {
+          "name": "wind_dir",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precip_mm": {
+          "name": "precip_mm",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon_code": {
+          "name": "icon_code",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_fetch": {
+          "name": "idx_fetch",
+          "columns": [
+            {
+              "expression": "fetched_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "readings_location_id_locations_id_fk": {
+          "name": "readings_location_id_locations_id_fk",
+          "tableFrom": "readings",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "location_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "unique_readings": {
+          "name": "unique_readings",
+          "nullsNotDistinct": false,
+          "columns": [
+            "location_id",
+            "resolution",
+            "valid_at"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
