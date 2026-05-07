@@ -1,19 +1,14 @@
-import {
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  UserButton,
-} from "@clerk/clerk-react";
+import { SignedIn, SignedOut, SignIn, UserButton } from "@clerk/clerk-react";
 
 export default function App() {
   return (
-    <header>
+    <div className="flex min-h-screen items-center justify-center">
       <SignedOut>
-        <SignInButton />
+        <SignIn />
       </SignedOut>
       <SignedIn>
         <UserButton />
       </SignedIn>
-    </header>
+    </div>
   );
 }
