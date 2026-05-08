@@ -34,7 +34,7 @@ export const planeSnapshots = pgTable(
 
         baroAltitude: doublePrecision("baro_altitude"),
 
-        onGround: boolean("on_ground"),
+        onGround: boolean("on_ground").notNull(),
 
         groundSpeed: doublePrecision("ground_speed"),
 
@@ -42,7 +42,7 @@ export const planeSnapshots = pgTable(
 
         verticalRate: doublePrecision("vertical_rate"),
 
-        spi: boolean("spi"),
+        spi: boolean("spi").notNull(),
     },
     (t) => [
         index("plane_snapshots_snapshot_id_index").on(t.snapshotId),

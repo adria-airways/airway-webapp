@@ -20,7 +20,7 @@ export const planeLive = pgTable(
 
         baroAltitude: doublePrecision("baro_altitude"),
 
-        onGround: boolean("on_ground"),
+        onGround: boolean("on_ground").notNull(),
 
         groundSpeed: doublePrecision("ground_speed"),
 
@@ -28,7 +28,7 @@ export const planeLive = pgTable(
 
         verticalRate: doublePrecision("vertical_rate"),
 
-        spi: boolean("spi"),
+        spi: boolean("spi").notNull(),
     },
     (t) => [
         index("plane_live_snapshot_time_index").on(t.snapshotTime),
