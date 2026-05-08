@@ -10,7 +10,7 @@ export const planeLive = pgTable(
             mode: "date",
         }).notNull(),
 
-        callsign: text("calsign"),
+        callsign: text("callsign"),
 
         originCountry: text("origin_country"),
 
