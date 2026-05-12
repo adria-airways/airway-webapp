@@ -1,5 +1,5 @@
-import { db } from "../../index";
-import { locations } from "../../schema";
+import { db } from "../../index.js";
+import { locations } from "../../schema.js";
 
 const data = [
   {
