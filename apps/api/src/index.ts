@@ -1,6 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { startCronjob, fetchWeatherData } from "./cron/weather.js";
 
 dotenv.config();
 
@@ -11,9 +12,12 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, message: "Healthy!" });
+  res.json({ ok: true, message: "Healthy!" });
 });
 
 app.listen(port, () => {
-    console.log(`Running on http://localhost:${port}`);
+  console.log(`Running on http://localhost:${port}`);
+
+  startCronjob();
+  fetchWeatherData();
 });

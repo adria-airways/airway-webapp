@@ -9,7 +9,7 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { locations } from "./locations";
+import { locations } from "./locations.js";
 
 export const readings = pgTable(
   "readings",
