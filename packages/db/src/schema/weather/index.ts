@@ -1,2 +1,2 @@
-export * from "./locations";
-export * from "./readings";
+export * from "./locations.js";
+export * from "./readings.js";

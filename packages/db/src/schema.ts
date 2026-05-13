@@ -1,2 +1,1 @@
-export * from "./schema/weather";
-export * from "./schema/planes"
+export * from "./schema/weather/index.js";
