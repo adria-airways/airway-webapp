@@ -12,29 +12,8 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1778248047351,
-      "tag": "0001_easy_doorman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778248635784,
-      "tag": "0002_optimal_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778248755509,
-      "tag": "0003_cynical_husk",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1778248815523,
-      "tag": "0004_closed_tusk",
+      "when": 1778677772056,
+      "tag": "0001_worthless_vulture",
       "breakpoints": true
     }
   ]

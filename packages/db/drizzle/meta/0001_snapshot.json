@@ -1,5 +1,5 @@
 {
-  "id": "1f455eb0-0666-47ba-b1d0-3ff3a2493220",
+  "id": "a9fb2f89-95d7-48b2-a87b-4bd18eacfe2d",
   "prevId": "ea6c8f75-ba2f-4821-8da8-3f29607f5cec",
   "version": "7",
   "dialect": "postgresql",
@@ -273,8 +273,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "calsign": {
-          "name": "calsign",
+        "callsign": {
+          "name": "callsign",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -307,7 +307,7 @@
           "name": "on_ground",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "ground_speed": {
           "name": "ground_speed",
@@ -331,7 +331,7 @@
           "name": "spi",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {
@@ -431,7 +431,7 @@
           "name": "on_ground",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "ground_speed": {
           "name": "ground_speed",
@@ -455,7 +455,7 @@
           "name": "spi",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {

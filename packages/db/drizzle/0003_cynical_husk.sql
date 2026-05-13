@@ -1,1 +1,0 @@
-ALTER TABLE "plane_live" ALTER COLUMN "spi" DROP NOT NULL;

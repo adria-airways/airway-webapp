@@ -8,16 +8,16 @@ CREATE TABLE "snapshots" (
 CREATE TABLE "plane_live" (
 	"hex" text PRIMARY KEY NOT NULL,
 	"snapshot_time" timestamp with time zone NOT NULL,
-	"calsign" text,
+	"callsign" text,
 	"origin_country" text,
 	"latitude" double precision,
 	"longitude" double precision,
 	"baro_altitude" double precision,
-	"on_ground" boolean,
+	"on_ground" boolean NOT NULL,
 	"ground_speed" double precision,
 	"heading" double precision,
 	"vertical_rate" double precision,
-	"spi" boolean
+	"spi" boolean NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "plane_snapshots" (
@@ -30,11 +30,11 @@ CREATE TABLE "plane_snapshots" (
 	"latitude" double precision,
 	"longitude" double precision,
 	"baro_altitude" double precision,
-	"on_ground" boolean,
+	"on_ground" boolean NOT NULL,
 	"ground_speed" double precision,
 	"heading" double precision,
 	"vertical_rate" double precision,
-	"spi" boolean,
+	"spi" boolean NOT NULL,
 	CONSTRAINT "plane_snapshots_hex_time_unique" UNIQUE("hex","snapshot_time")
 );
 --> statement-breakpoint

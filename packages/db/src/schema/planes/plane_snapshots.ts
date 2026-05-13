@@ -1,6 +1,6 @@
 import { bigint, index, unique, pgTable, timestamp, boolean, doublePrecision, text } from "drizzle-orm/pg-core";
 
-import { snapshots } from "./snapshots";
+import { snapshots } from "./snapshots.js";
 
 export const planeSnapshots = pgTable(
     "plane_snapshots",
