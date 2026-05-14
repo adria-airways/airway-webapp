@@ -29,6 +29,28 @@ export const planeLive = pgTable(
         verticalRate: doublePrecision("vertical_rate"),
 
         spi: boolean("spi").notNull(),
+
+        airline: text("airline"),
+
+        flyingFromCountry: text("flying_from_country"),
+
+        flyingFromLatitude: doublePrecision("flying_from_latitude"),
+
+        flyingFromLongitude: doublePrecision("flying_from_longitude"),
+
+        flyingFromCity: text("flying_from_city"),
+
+        flyingFromAirport: text("flying_from_airport"),
+
+        flyingToCountry: text("flying_to_country"),
+
+        flyingToLatitude: doublePrecision("flying_to_latitude"),
+
+        flyingToLongitude: doublePrecision("flying_to_longitude"),
+
+        flyingToCity: text("flying_to_city"),
+
+        flyingToAirport: text("flying_to_airport"),
     },
     (t) => [
         index("plane_live_snapshot_time_index").on(t.snapshotTime),
