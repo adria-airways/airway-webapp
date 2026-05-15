@@ -26,6 +26,12 @@ async function cleanSnapshots() {
   );
 }
 
+async function cleanRoutes() {
+  await db.execute(
+    sql`DELETE FROM plane_routes WHERE created_at < NOW() - INTERVAL '5 days'`,
+  );
+}
+
 async function fetchRoute(callsign: string) {
   try {
     const res = await axios.get(
@@ -179,6 +185,7 @@ async function fetchPlaneData() {
   await db.insert(planeRoutes).values(rowsWithRouteData).onConflictDoNothing();
 
   await cleanSnapshots();
+  await cleanRoutes();
   console.log(`[planes-cron] adsbdb failed lookups: ${failed}/${missingRoutes.length}`);
   console.log(`[planes-cron] done`);
 }
