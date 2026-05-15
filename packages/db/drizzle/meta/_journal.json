@@ -50,6 +50,20 @@
       "when": 1778772628011,
       "tag": "0006_orange_ozymandias",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778826809930,
+      "tag": "0007_messy_tombstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778826871586,
+      "tag": "0008_overconfident_vampiro",
+      "breakpoints": true
     }
   ]
 }
