@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import axios from "axios";
-import { db, snapshots, planeSnapshots, planeLive, sql } from "db";
+import { db, snapshots, planeSnapshots, planeLive, sql, planeRoutes } from "db";
 
 const API_URL = "https://opensky-network.org/api/states/all?lamin=45&lomin=12.8&lamax=47.1&lomax=16.8";
 
@@ -76,14 +76,6 @@ async function fetchPlaneData() {
       heading: toFloat(state[10]) ?? null,
       verticalRate: toFloat(state[11]) ?? null,
       spi: state[15],
-
-      airline: null,
-      flyingFromCountry: null,
-      flyingFromLatitude: null,
-      flyingFromLongitude: null,
-      flyingToCountry: null,
-      flyingToLatitude: null,
-      flyingToLongitude: null,
     };
   });
 
@@ -92,27 +84,53 @@ async function fetchPlaneData() {
     return;
   }
 
-  const callsigns = [
-    ...new Set(
+  type PlaneIdentifier = {
+    hex: string;
+    callsign: string;
+  };
+
+  const planes: PlaneIdentifier[] = [
+    ...new Map<string, PlaneIdentifier>(
       rows
-        .map((r: any) => r.callsign?.trim())
-        .filter(Boolean) as string[]
-    ),
+        .filter((r: any) => r.callsign)
+        .map((r: any) => [
+          `${r.hex}:${r.callsign}`,
+          {
+            hex: r.hex,
+            callsign: r.callsign!,
+          },
+        ])
+    ).values(),
   ];
+
+  const existingRoutes = await db
+    .select({
+      hex: planeRoutes.hex,
+      callsign: planeRoutes.callsign,
+    })
+    .from(planeRoutes);
+
+  const existingSet = new Set(
+    existingRoutes.map(r => `${r.hex}:${r.callsign}`)
+  );
+
+  const missingRoutes = planes.filter(
+    p => !existingSet.has(`${p.hex}:${p.callsign}`)
+  );
 
   let failed = 0;
 
   const routeMap = new Map<string, any>();
 
-  for (const callsign of callsigns) {
-    const res = await fetchRoute(callsign);
+  for (const missingRoute of missingRoutes) {
+    const res = await fetchRoute(missingRoute.callsign);
 
     if (!res || !res.response?.flightroute) {
       failed++;
       continue;
     }
 
-    routeMap.set(callsign, res.response.flightroute);
+    routeMap.set(missingRoute.callsign, res.response.flightroute);
   }
 
   const rowsWithRouteData = rows.map((r: any) => {
@@ -127,7 +145,9 @@ async function fetchPlaneData() {
     }
 
     return {
-      ...r,
+
+      hex: r.hex,
+      callsign: r.callsign,
 
       airline: route?.airline?.name ?? null,
 
@@ -147,18 +167,19 @@ async function fetchPlaneData() {
 
   await db.transaction(async (t) => {
     await t.delete(planeLive);
-    await t.insert(planeLive).values(rowsWithRouteData);
+    await t.insert(planeLive).values(rows);
   });
 
-  const historyRows = rowsWithRouteData.map((r: any) => ({
+  const historyRows = rows.map((r: any) => ({
     ...r,
     snapshotId,
   }));
 
   await db.insert(planeSnapshots).values(historyRows);
+  await db.insert(planeRoutes).values(rowsWithRouteData).onConflictDoNothing();
 
   await cleanSnapshots();
-  console.log(`[planes-cron] adsbdb failed lookups: ${failed}/${callsigns.length}`);
+  console.log(`[planes-cron] adsbdb failed lookups: ${failed}/${missingRoutes.length}`);
   console.log(`[planes-cron] done`);
 }
 
