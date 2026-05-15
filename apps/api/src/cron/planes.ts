@@ -20,7 +20,7 @@ function toFloat(value: unknown): number | null {
   return Number(value);
 }
 
-async function cleanReadings() {
+async function cleanSnapshots() {
   await db.execute(
     sql`DELETE FROM snapshots WHERE snapshot_time < NOW() - INTERVAL '5 days'`,
   );
@@ -157,7 +157,7 @@ async function fetchPlaneData() {
 
   await db.insert(planeSnapshots).values(historyRows);
 
-  await cleanReadings();
+  await cleanSnapshots();
   console.log(`[planes-cron] adsbdb failed lookups: ${failed}/${callsigns.length}`);
   console.log(`[planes-cron] done`);
 }
