@@ -14,6 +14,30 @@ export async function getLivePlanes() {
     );
 }
 
+export async function getLivePlanesSlovenia() {
+  return await db.execute(
+    `
+    SELECT *
+FROM plane_live
+WHERE latitude IS NOT NULL
+  AND longitude IS NOT NULL
+  AND ST_Contains(
+    ST_GeomFromGeoJSON(
+      (
+        SELECT geo_json
+        FROM geo_regions
+        WHERE name = 'Slovenia'
+      )
+    ),
+    ST_SetSRID(
+      ST_MakePoint(longitude, latitude),
+      4326
+    )
+  );
+    `
+  )
+}
+
 export async function getLatestSnapshot() {
   const [latestSnapshot] = await db
     .select()

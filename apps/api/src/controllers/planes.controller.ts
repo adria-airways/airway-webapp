@@ -7,6 +7,12 @@ export async function getLivePlanes(_req: Request, res: Response) {
   res.json({ data });
 }
 
+export async function getLivePlanesSlovenia(_req: Request, res: Response) {
+  const data = await planesService.getLivePlanesSlovenia();
+
+  res.json({ data });
+}
+
 export async function getLatestSnapshot(_req: Request, res: Response) {
   const latestSnapshot = await planesService.getLatestSnapshot();
 

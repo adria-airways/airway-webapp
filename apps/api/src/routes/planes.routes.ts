@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigation } from "../controllers/planes.controller.js";
+import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigation, getLivePlanesSlovenia } from "../controllers/planes.controller.js";
 
 const router = Router();
 
 router.get("/live", getLivePlanes);
+
+router.get("/live/slovenia", getLivePlanesSlovenia);
 
 router.get("/snapshots/latest", getLatestSnapshot);
 
