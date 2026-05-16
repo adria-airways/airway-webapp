@@ -1,0 +1,1 @@
+ALTER TABLE "plane_routes" ADD COLUMN "hex" text;
