@@ -2091,5 +2091,10 @@ const data = [
     },
 ];
 
+await db.execute(
+    `
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    `
+);
 await db.insert(geoRegions).values(data).onConflictDoNothing();
 process.exit(0);
