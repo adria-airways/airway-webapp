@@ -1,7 +1,7 @@
 import { Router } from "express";
 
-import { permissions } from "../auth/permissions";
-import { requirePermission } from "../middleware/auth.middleware";
+import { permissions } from "../auth/permissions.js";
+import { requirePermission } from "../middleware/auth.middleware.js";
 
 const router = Router();
 

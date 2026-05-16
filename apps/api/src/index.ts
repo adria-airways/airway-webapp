@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import { startCronjob, fetchWeatherData } from "./cron/weather.js";
 import { startPlanesCronjob, fetchPlaneData } from "./cron/planes.js";
 
+dotenv.config();
 const app = createApp();
 const port = process.env.PORT ?? 3001;
 
