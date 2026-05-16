@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
 
 import routes from "./routes/index.js";
 import { notFoundMiddleware } from "./middleware/not-found.middleware.js";
@@ -10,6 +11,8 @@ export function createApp() {
 
   app.use(cors());
   app.use(express.json());
+  app.use(clerkMiddleware());
+
   app.use("/api", routes);
 
   app.use(notFoundMiddleware);

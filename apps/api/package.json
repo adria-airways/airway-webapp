@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
+    "@clerk/express": "^2.1.14",
     "axios": "^1.16.0",
     "cors": "^2.8.6",
     "db": "workspace:*",
