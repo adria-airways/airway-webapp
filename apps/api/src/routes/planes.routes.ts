@@ -3,14 +3,18 @@ import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigatio
 
 const router = Router();
 
-router.get("/live", getLivePlanes);
+//web app
 
-router.get("/live/slovenia", getLivePlanesSlovenia);
+router.get("/app/live", getLivePlanes);
 
-router.get("/snapshots/latest", getLatestSnapshot);
+router.get("/app/live/slovenia", getLivePlanesSlovenia);
 
-router.get("/snapshots/:id", getSnapshotById);
+router.get("/app/snapshots/latest", getLatestSnapshot);
 
-router.get("/snapshots/:id/navigation", getSnapshotNavigation);
+router.get("/app/snapshots/:id", getSnapshotById);
+
+router.get("/app/snapshots/:id/navigation", getSnapshotNavigation);
+
+//crud
 
 export default router;
