@@ -1,8 +1,11 @@
-import { db, eq, locations } from "db";
+import { db, eq, locations, and, gte, lte, readings } from "db";
 
-import type {
-  CreateLocationInput,
-  UpdateLocationInput,
+import {
+  type CreateLocationInput,
+  type CreateReadingInput,
+  type ReadingsQueryInput,
+  type UpdateLocationInput,
+  type UpdateReadingInput,
 } from "../validation/weather.validation.js";
 
 export async function listLocations() {
@@ -42,4 +45,54 @@ export async function deleteLocation(id: string) {
     .returning();
 
   return location ?? null;
+}
+
+export async function listReadings(input: ReadingsQueryInput) {
+  const filters = [
+    input.locationId ? eq(readings.locationId, input.locationId) : undefined,
+    input.resolution ? eq(readings.resolution, input.resolution) : undefined,
+    input.from ? gte(readings.validAt, input.from) : undefined,
+    input.to ? lte(readings.validAt, input.to) : undefined,
+  ].filter((filter) => filter !== undefined);
+
+  return db
+    .select()
+    .from(readings)
+    .where(filters.length > 0 ? and(...filters) : undefined)
+    .limit(input.limit);
+}
+
+export async function getReadingWithId(id: number) {
+  const [reading] = await db
+    .select()
+    .from(readings)
+    .where(eq(readings.id, id))
+    .limit(1);
+
+  return reading ?? null;
+}
+
+export async function createReading(input: CreateReadingInput) {
+  const [reading] = await db.insert(readings).values(input).returning();
+
+  return reading;
+}
+
+export async function updateReading(id: number, input: UpdateReadingInput) {
+  const [reading] = await db
+    .update(readings)
+    .set(input)
+    .where(eq(readings.id, id))
+    .returning();
+
+  return reading ?? null;
+}
+
+export async function deleteReading(id: number) {
+  const [reading] = await db
+    .delete(readings)
+    .where(eq(readings.id, id))
+    .returning();
+
+  return reading ?? null;
 }
