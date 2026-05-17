@@ -42,11 +42,31 @@ router.delete(
 router.get(
   "/readings",
   requirePermission(permissions.weatherRead),
-  (_req, res) => {
-    res.json({
-      message: "List all weather readings.",
-    });
-  },
+  weatherController.listReadings,
+);
+
+router.get(
+  "/readings/:id",
+  requirePermission(permissions.weatherRead),
+  weatherController.getReading,
+);
+
+router.post(
+  "/readings",
+  requirePermission(permissions.weatherManage),
+  weatherController.createReading,
+);
+
+router.patch(
+  "/readings/:id",
+  requirePermission(permissions.weatherManage),
+  weatherController.updateReading,
+);
+
+router.delete(
+  "/readings/:id",
+  requirePermission(permissions.weatherManage),
+  weatherController.deleteReading,
 );
 
 router.post(
