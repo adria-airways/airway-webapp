@@ -22,6 +22,33 @@ function toFloat(value: unknown): number | null {
 
 function parseReadings(data: Record<string, any>, locationId: string) {
   const rows = [];
+
+  const observation = data.observation?.features?.[0]?.properties?.days ?? [];
+
+  for (const day of observation) {
+    for (const entry of day.timeline ?? []) {
+      if (!entry.valid) {
+        continue;
+      }
+
+      rows.push({
+        locationId,
+        resolution: "obs",
+        validAt: new Date(entry.valid),
+        tempC: toInt(entry.t),
+        tempMinC: null,
+        tempMaxC: null,
+        rhPct: toInt(entry.rh),
+        mslHpa: toInt(entry.msl),
+        windKmh: toInt(entry.ff_val),
+        gustKmh: toInt(entry.ffmax_val),
+        windDir: entry.dd_shortText ?? null,
+        precipMm: null,
+        iconCode: entry.clouds_icon_wwsyn_icon ?? null,
+      });
+    }
+  }
+
   const keys = [
     { key: "forecast3h", res: "3h" },
     { key: "forecast6h", res: "6h" },
@@ -32,7 +59,11 @@ function parseReadings(data: Record<string, any>, locationId: string) {
     const days = data[key]?.features?.[0]?.properties?.days ?? [];
 
     for (const day of days) {
-      for (const entry of day.timeline) {
+      for (const entry of day.timeline ?? []) {
+        if (!entry.valid) {
+          continue;
+        }
+
         rows.push({
           locationId,
           resolution: res,
@@ -43,9 +74,9 @@ function parseReadings(data: Record<string, any>, locationId: string) {
           rhPct: toInt(entry.rh),
           mslHpa: toInt(entry.msl),
           windKmh: toInt(entry.ff_val),
-          gustKmh: toInt(entry.ff_max),
+          gustKmh: toInt(entry.ffmax_val),
           windDir: entry.dd_shortText ?? null,
-          precipMm: toFloat(entry.tp_acc),
+          precipMm: toFloat(entry.tp_acc ?? entry.tp_24h_acc),
           iconCode: entry.clouds_icon_wwsyn_icon ?? null,
         });
       }
@@ -56,9 +87,17 @@ function parseReadings(data: Record<string, any>, locationId: string) {
 }
 
 async function cleanReadings() {
-  await db.execute(
-    sql`DELETE FROM readings WHERE fetched_at < NOW() - INTERVAL '5 days'`,
-  );
+  await db.execute(sql`
+    DELETE FROM readings
+    WHERE resolution = 'obs'
+    AND valid_at < NOW() - INTERVAL '5 days'
+  `);
+
+  await db.execute(sql`
+    DELETE FROM readings
+    WHERE resolution <> 'obs'
+    AND valid_at < date_trunc('day', NOW())
+  `);
 }
 
 async function fetchLocationData(locationId: string, title: string) {
@@ -68,11 +107,29 @@ async function fetchLocationData(locationId: string, title: string) {
 
   const rows = parseReadings(data, locationId);
   if (rows.length === 0) {
-    console.log("empty readings");
+    console.log("[weather-cron] no readings!");
     return;
   }
 
-  await db.insert(readings).values(rows).onConflictDoNothing();
+  await db
+    .insert(readings)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [readings.locationId, readings.resolution, readings.validAt],
+      set: {
+        tempC: sql`excluded.temp_c`,
+        tempMinC: sql`excluded.temp_min_c`,
+        tempMaxC: sql`excluded.temp_max_c`,
+        rhPct: sql`excluded.rh_pct`,
+        mslHpa: sql`excluded.msl_hpa`,
+        windKmh: sql`excluded.wind_kmh`,
+        gustKmh: sql`excluded.gust_kmh`,
+        windDir: sql`excluded.wind_dir`,
+        precipMm: sql`excluded.precip_mm`,
+        iconCode: sql`excluded.icon_code`,
+        fetchedAt: sql`now()`,
+      },
+    });
 }
 
 async function fetchWeatherData() {
