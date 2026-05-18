@@ -24,6 +24,10 @@ export const readingsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
+export const readingIdParameterSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 export const readingDataSchema = z.object({
   validAt: z.coerce.date(),
   tempC: z.number().int().optional(),
@@ -38,6 +42,13 @@ export const readingDataSchema = z.object({
   iconCode: z.string().max(32).optional(),
 });
 
+export const createReadingSchema = readingDataSchema.extend({
+  locationId: z.string().min(1).max(16),
+  resolution: z.string().min(1).max(3),
+});
+
+export const updateReadingSchema = readingDataSchema.partial();
+
 export const bulkReadingsSchema = z.object({
   resolution: z.string().min(1).max(3),
   source: z.string().optional(),
@@ -50,3 +61,7 @@ export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
 export type ReadingsQueryInput = z.infer<typeof readingsQuerySchema>;
 export type ReadingDataInput = z.infer<typeof readingDataSchema>;
 export type BulkReadingsInput = z.infer<typeof bulkReadingsSchema>;
+
+export type ReadingIdParameters = z.infer<typeof readingIdParameterSchema>;
+export type CreateReadingInput = z.infer<typeof createReadingSchema>;
+export type UpdateReadingInput = z.infer<typeof updateReadingSchema>;
