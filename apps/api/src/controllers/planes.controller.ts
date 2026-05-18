@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
-import { createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
+import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
 export async function getLivePlanes(_req: Request, res: Response) {
   const data = await planesService.getLivePlanes();
@@ -525,4 +525,55 @@ export async function deleteRegion(req: Request, res: Response) {
   }
   
   res.json(region);
+}
+
+export async function bulkInsertPlaneLive(req: Request, res: Response) {
+  const parsed = bulkPlaneLiveSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid bulk payload",
+      errors: parsed.error,
+    });
+  }
+
+  const result = await planesService.bulkInsertPlaneLive(parsed.data.planes);
+
+  res.status(201).json({
+    inserted: result.length,
+  });
+}
+
+export async function bulkInsertPlaneSnapshot(req: Request, res: Response) {
+  const parsed = bulkPlaneSnapshotSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid bulk payload",
+      errors: parsed.error,
+    });
+  }
+
+  const result = await planesService.bulkInsertPlaneSnapshot(parsed.data.planes);
+
+  res.status(201).json({
+    inserted: result.length,
+  });
+}
+
+export async function bulkInsertPlaneRoute(req: Request, res: Response) {
+  const parsed = bulkPlaneRouteSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid bulk payload",
+      errors: parsed.error,
+    });
+  }
+
+  const result = await planesService.bulkInsertPlaneRoute(parsed.data.routes);
+
+  res.status(201).json({
+    inserted: result.length,
+  });
 }

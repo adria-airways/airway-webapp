@@ -3,7 +3,10 @@ import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigatio
    createPlaneLive, updatePlaneLive, deletePlaneLive, getPlaneSnapshotById, createPlaneSnapshot, getAllLivePlanes, getPlaneSnapshot,
    updatePlaneSnapshot, deletePlaneSnapshot, getSnapshots, createSnapshot, updateSnapshot, deleteSnapshot, getPlaneRoutes,
    getPlaneRouteById, createPlaneRoute, updatePlaneRoute, deletePlaneRoute, getRegions, getRegionById, createRegion,
-   updateRegion, deleteRegion, } from "../controllers/planes.controller.js";
+   updateRegion, deleteRegion,
+   bulkInsertPlaneLive,
+   bulkInsertPlaneSnapshot,
+   bulkInsertPlaneRoute, } from "../controllers/planes.controller.js";
 import { permissions } from "../auth/permissions.js";
 import {
   requirePermission,
@@ -59,21 +62,9 @@ router.delete("/regions/:id", requirePermission(permissions.planesManage), delet
 
 //bulk insert
 
-router.post("/live/bulk", requirePermission(permissions.planesManage), (_req, res) => {
-  res.json({
-    message: "Bulk insert in plane_live.",
-  });
-});
-router.post("/plane-snapshots/bulk", requirePermission(permissions.planesManage), (_req, res) => {
-  res.json({
-    message: "Bulk insert in plane_snapshots.",
-  });
-});
-router.post("/routes/bulk", requirePermission(permissions.planesManage), (_req, res) => {
-  res.json({
-    message: "Bulk insert in plane_routes.",
-  });
-});
+router.post("/live/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneLive);
+router.post("/plane-snapshots/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneSnapshot);
+router.post("/routes/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneRoute);
 
 
 export default router;

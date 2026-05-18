@@ -304,3 +304,27 @@ export async function deleteRegion(id: number) {
 
   return region ?? null;
 }
+
+export async function bulkInsertPlaneLive(planes: PlaneLiveInput[]) {
+  return await db
+    .insert(planeLive)
+    .values(planes)
+    .onConflictDoNothing()
+    .returning();
+}
+
+export async function bulkInsertPlaneSnapshot(planes: PlaneSnapshotInput[]) {
+  return await db
+    .insert(planeSnapshots)
+    .values(planes)
+    .onConflictDoNothing()
+    .returning();
+}
+
+export async function bulkInsertPlaneRoute(routes: PlaneRouteInput[]) {
+  return await db
+    .insert(planeRoutes)
+    .values(routes)
+    .onConflictDoNothing()
+    .returning();
+}
