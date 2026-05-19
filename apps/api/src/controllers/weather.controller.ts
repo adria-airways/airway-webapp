@@ -9,6 +9,7 @@ import {
   readingsQuerySchema,
   updateLocationSchema,
   updateReadingSchema,
+  bulkReadingsSchema,
 } from "../validation/weather.validation.js";
 
 export async function listLocations(
@@ -192,6 +193,31 @@ export async function deleteReading(
     }
 
     res.json(reading);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function bulkUpsertForLocation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const params = locationParameterSchema.parse(req.params);
+    const body = bulkReadingsSchema.parse(req.body);
+    const result = await weatherService.bulkUpsertReadingsForLocation(
+      params.id,
+      body,
+    );
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Weather station location not found!",
+      });
+    }
+
+    res.json(result);
   } catch (error) {
     next(error);
   }

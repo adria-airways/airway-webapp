@@ -1,4 +1,4 @@
-import { db, eq, locations, and, gte, lte, readings } from "db";
+import { db, eq, locations, and, gte, lte, readings, sql } from "db";
 
 import {
   type CreateLocationInput,
@@ -6,6 +6,7 @@ import {
   type ReadingsQueryInput,
   type UpdateLocationInput,
   type UpdateReadingInput,
+  type BulkReadingsInput,
 } from "../validation/weather.validation.js";
 
 export async function listLocations() {
@@ -95,4 +96,59 @@ export async function deleteReading(id: number) {
     .returning();
 
   return reading ?? null;
+}
+
+export async function bulkUpsertReadingsForLocation(
+  locationId: string,
+  input: BulkReadingsInput,
+) {
+  const location = await getLocationWithId(locationId);
+
+  if (!location) {
+    return null;
+  }
+  const fetchedAt = new Date();
+
+  await db
+    .insert(readings)
+    .values(
+      input.readings.map((reading) => ({
+        locationId,
+        resolution: input.resolution,
+        validAt: reading.validAt,
+        tempC: reading.tempC,
+        tempMinC: reading.tempMinC,
+        tempMaxC: reading.tempMaxC,
+        rhPct: reading.rhPct,
+        mslHpa: reading.mslHpa,
+        windKmh: reading.windKmh,
+        gustKmh: reading.gustKmh,
+        windDir: reading.windDir,
+        precipMm: reading.precipMm,
+        iconCode: reading.iconCode,
+        fetchedAt,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [readings.locationId, readings.resolution, readings.validAt],
+      set: {
+        tempC: sql`excluded.temp_c`,
+        tempMinC: sql`excluded.temp_min_c`,
+        tempMaxC: sql`excluded.temp_max_c`,
+        rhPct: sql`excluded.rh_pct`,
+        mslHpa: sql`excluded.msl_hpa`,
+        windKmh: sql`excluded.wind_kmh`,
+        gustKmh: sql`excluded.gust_kmh`,
+        windDir: sql`excluded.wind_dir`,
+        precipMm: sql`excluded.precip_mm`,
+        iconCode: sql`excluded.icon_code`,
+        fetchedAt,
+      },
+    });
+
+  return {
+    locationId,
+    resolution: input.resolution,
+    upserted: input.readings.length,
+  };
 }

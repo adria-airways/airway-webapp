@@ -72,11 +72,7 @@ router.delete(
 router.post(
   "/locations/:id/readings/bulk",
   requirePermission(permissions.weatherManage),
-  (_req, res) => {
-    res.json({
-      message: "Bulk upsert for weather readings.",
-    });
-  },
+  weatherController.bulkUpsertForLocation,
 );
 
 /* WEBAPP ENDPOINTS */
