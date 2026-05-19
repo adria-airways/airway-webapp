@@ -9,7 +9,6 @@
     "cors": "^2.8.6",
     "db": "workspace:*",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "swagger-jsdoc": "^6.2.8",

@@ -47,9 +47,6 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(pg@8.20.0)(postgres@3.4.9)
       express:
         specifier: ^5.2.1
         version: 5.2.1

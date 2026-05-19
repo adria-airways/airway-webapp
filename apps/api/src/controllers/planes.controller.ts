@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
-import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, flightHistoryRouteInfoQuerySchema, nearbyAircraftQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
+import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryRouteInfoQuerySchema, nearbyAircraftQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
 export async function getLivePlanes(_req: Request, res: Response) {
   const data = await planesService.getLivePlanes();
