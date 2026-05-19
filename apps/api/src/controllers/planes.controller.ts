@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
-import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
+import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
 export async function getLivePlanes(_req: Request, res: Response) {
   const data = await planesService.getLivePlanes();
@@ -576,4 +576,21 @@ export async function bulkInsertPlaneRoute(req: Request, res: Response) {
   res.status(201).json({
     inserted: result.length,
   });
+}
+
+export async function getFlightHistory(req: Request, res: Response) {
+  const parsed = flightHistoryQuerySchema.safeParse(req.query);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid query params for flight history",
+      errors: parsed.error,
+    });
+  }
+
+  const { hex, callsign } = parsed.data;
+
+  const data = await planesService.getFlightHistory(hex, callsign);
+
+  res.json({ data });
 }

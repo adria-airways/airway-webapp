@@ -112,6 +112,11 @@ export const bulkPlaneRouteSchema = z.object({
   routes: z.array(createPlaneRouteSchema).min(1).max(10000),
 });
 
+export const flightHistoryQuerySchema = z.object({
+  hex: z.string().min(1).max(16),
+  callsign: z.string().min(1).max(16),
+});
+
 export type PlaneHexParameter = z.infer<typeof planeHexParameterSchema>;
 export type PlaneIdParameter = z.infer<typeof planeIdParameterSchema>;
 export type PlaneRouteInput = z.infer<typeof createPlaneRouteSchema>;
@@ -127,3 +132,4 @@ export type UpdateGeoRegionInput = z.infer<typeof updateRegionSchema>;
 export type BulkPlaneLiveInput = z.infer<typeof bulkPlaneLiveSchema>;
 export type BulkPlaneSnapshotInput = z.infer<typeof bulkPlaneSnapshotSchema>;
 export type BulkPlaneRouteInput = z.infer<typeof bulkPlaneRouteSchema>;
+export type FlightHistoryQuerySchema = z.infer<typeof flightHistoryQuerySchema>;

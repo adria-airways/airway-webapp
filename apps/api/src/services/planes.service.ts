@@ -1,5 +1,5 @@
 import { db, geoRegions, planeLive, planeRoutes, planeSnapshots, snapshots, sql } from "db";
-import { asc, desc, eq, gt, lt } from "drizzle-orm";
+import { asc, desc, eq, gt, lt, and } from "drizzle-orm";
 import { GeoRegionInput, PlaneLiveInput, PlaneRouteInput, PlaneSnapshotInput, SnapshotInput, UpdateGeoRegionInput, UpdatePlaneLiveInput, UpdatePlaneRouteInput, UpdatePlaneSnapshotInput, UpdateSnapshotInput } from "../validation/planes.validation";
 
 export async function getLivePlanes() {
@@ -327,4 +327,19 @@ export async function bulkInsertPlaneRoute(routes: PlaneRouteInput[]) {
     .values(routes)
     .onConflictDoNothing()
     .returning();
+}
+
+export async function getFlightHistory(hex: string, callsign: string) {
+  return await db
+    .select()
+    .from(planeSnapshots)
+    .where(
+      and(
+        eq(planeSnapshots.hex, hex),
+        eq(planeSnapshots.callsign, callsign)
+      )
+    )
+    .orderBy(
+      desc(planeSnapshots.snapshotTime)
+    )
 }
