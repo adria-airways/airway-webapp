@@ -77,22 +77,18 @@ router.post(
 
 /* WEBAPP ENDPOINTS */
 
-router.get("/app/locations", requireUser, (_req, res) => {
-  res.json({
-    message: "List all weather station locations.",
-  });
-});
+router.get("/app/locations", requireUser, weatherController.listAppLocations);
 
-router.get("/app/locations/:id/current", requireUser, (_req, res) => {
-  res.json({
-    message: "Get current weather.",
-  });
-});
+router.get(
+  "/app/locations/:id/current",
+  requireUser,
+  weatherController.getCurrentWeatherForLocation,
+);
 
-router.get("/app/locations/:id/forecast", requireUser, (_req, res) => {
-  res.json({
-    message: "Get weather forecast.",
-  });
-});
+router.get(
+  "/app/locations/:id/forecast",
+  requireUser,
+  weatherController.getForecastForLocation,
+);
 
 export default router;

@@ -1,4 +1,4 @@
-import { db, eq, locations, and, gte, lte, readings, sql } from "db";
+import { db, eq, locations, and, gte, lte, readings, sql, desc } from "db";
 
 import {
   type CreateLocationInput,
@@ -150,5 +150,50 @@ export async function bulkUpsertReadingsForLocation(
     locationId,
     resolution: input.resolution,
     upserted: input.readings.length,
+  };
+}
+
+export async function listAppLocations() {
+  return listLocations();
+}
+
+export async function getCurrentWeatherForLocation(locationId: string) {
+  const location = await getLocationWithId(locationId);
+
+  if (!location) {
+    return null;
+  }
+
+  const [current] = await db
+    .select()
+    .from(readings)
+    .where(eq(readings.locationId, locationId))
+    .orderBy(desc(readings.validAt))
+    .limit(1);
+
+  return {
+    location,
+    current: current ?? null,
+  };
+}
+
+export async function getForecastForLocation(locationId: string) {
+  const location = await getLocationWithId(locationId);
+
+  if (!location) {
+    return null;
+  }
+  const now = new Date();
+
+  const forecast = await db
+    .select()
+    .from(readings)
+    .where(and(eq(readings.locationId, locationId), gte(readings.validAt, now)))
+    .orderBy(readings.validAt)
+    .limit(48);
+
+  return {
+    location,
+    forecast,
   };
 }

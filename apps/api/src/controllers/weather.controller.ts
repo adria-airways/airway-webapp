@@ -222,3 +222,59 @@ export async function bulkUpsertForLocation(
     next(error);
   }
 }
+
+export async function listAppLocations(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const locations = await weatherService.listAppLocations();
+
+    res.json(locations);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getCurrentWeatherForLocation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const params = locationParameterSchema.parse(req.params);
+    const result = await weatherService.getCurrentWeatherForLocation(params.id);
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Weather station location not found!",
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getForecastForLocation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const params = locationParameterSchema.parse(req.params);
+    const result = await weatherService.getForecastForLocation(params.id);
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Weather station location not found!",
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
