@@ -343,3 +343,16 @@ export async function getFlightHistory(hex: string, callsign: string) {
       desc(planeSnapshots.snapshotTime)
     )
 }
+
+export async function getRouteInfo(hex: string, callsign: string) {
+  return await db
+    .select()
+    .from(planeRoutes)
+    .where(
+      and(
+        eq(planeRoutes.hex, hex),
+        eq(planeRoutes.callsign, callsign)
+      )
+    )
+    .limit(1);
+}

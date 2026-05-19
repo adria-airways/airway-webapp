@@ -7,7 +7,8 @@ import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigatio
    bulkInsertPlaneLive,
    bulkInsertPlaneSnapshot,
    bulkInsertPlaneRoute,
-   getFlightHistory, } from "../controllers/planes.controller.js";
+   getFlightHistory,
+   getRouteInfo, } from "../controllers/planes.controller.js";
 import { permissions } from "../auth/permissions.js";
 import {
   requirePermission,
@@ -24,6 +25,7 @@ router.get("/app/snapshots/latest", requireUser, getLatestSnapshot);
 router.get("/app/snapshots/:id", requireUser, getSnapshotById);
 router.get("/app/snapshots/:id/navigation", requireUser, getSnapshotNavigation);
 router.get("/app/flights/history", requireUser, getFlightHistory);
+router.get("/app/routes/info", requireUser, getRouteInfo);
 
 //crud
 

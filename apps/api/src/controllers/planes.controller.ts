@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
-import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
+import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, flightHistoryRouteInfoQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
 export async function getLivePlanes(_req: Request, res: Response) {
   const data = await planesService.getLivePlanes();
@@ -579,7 +579,7 @@ export async function bulkInsertPlaneRoute(req: Request, res: Response) {
 }
 
 export async function getFlightHistory(req: Request, res: Response) {
-  const parsed = flightHistoryQuerySchema.safeParse(req.query);
+  const parsed = flightHistoryRouteInfoQuerySchema.safeParse(req.query);
 
   if (!parsed.success) {
     return res.status(400).json({
@@ -591,6 +591,23 @@ export async function getFlightHistory(req: Request, res: Response) {
   const { hex, callsign } = parsed.data;
 
   const data = await planesService.getFlightHistory(hex, callsign);
+
+  res.json({ data });
+}
+
+export async function getRouteInfo(req: Request, res: Response) {
+  const parsed = flightHistoryRouteInfoQuerySchema.safeParse(req.query);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid query params for route info",
+      errors: parsed.error,
+    });
+  }
+
+  const { hex, callsign } = parsed.data;
+
+  const data = await planesService.getRouteInfo(hex, callsign);
 
   res.json({ data });
 }
