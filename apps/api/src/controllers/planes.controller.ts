@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
-import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, flightHistoryRouteInfoQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
+import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryQuerySchema, flightHistoryRouteInfoQuerySchema, nearbyAircraftQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
 export async function getLivePlanes(_req: Request, res: Response) {
   const data = await planesService.getLivePlanes();
@@ -608,6 +608,29 @@ export async function getRouteInfo(req: Request, res: Response) {
   const { hex, callsign } = parsed.data;
 
   const data = await planesService.getRouteInfo(hex, callsign);
+
+  res.json({ data });
+}
+
+export async function getNearbyPlanes(req: Request, res: Response) {
+  const parsed = nearbyAircraftQuerySchema.safeParse(req.query);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid query params for nearby planes",
+      errors: parsed.error,
+    });
+  }
+
+  const { latitude, longitude, radius } = parsed.data;
+
+  const data = await planesService.getNearbyPlanes(longitude, latitude, radius);
+
+  res.json({ data });
+}
+
+export async function getStats(req: Request, res: Response) {
+  const data = await planesService.getStats();
 
   res.json({ data });
 }

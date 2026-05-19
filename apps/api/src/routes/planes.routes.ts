@@ -8,7 +8,9 @@ import { getLivePlanes, getLatestSnapshot, getSnapshotById, getSnapshotNavigatio
    bulkInsertPlaneSnapshot,
    bulkInsertPlaneRoute,
    getFlightHistory,
-   getRouteInfo, } from "../controllers/planes.controller.js";
+   getRouteInfo,
+   getNearbyPlanes,
+   getStats, } from "../controllers/planes.controller.js";
 import { permissions } from "../auth/permissions.js";
 import {
   requirePermission,
@@ -20,10 +22,13 @@ const router = Router();
 //web app
 
 router.get("/app/live", requireUser, getLivePlanes);
+router.get("/app/nearby", requireUser, getNearbyPlanes);
+router.get("/app/stats", requireUser, getStats);
 router.get("/app/live/slovenia", requireUser, getLivePlanesSlovenia);
 router.get("/app/snapshots/latest", requireUser, getLatestSnapshot);
 router.get("/app/snapshots/:id", requireUser, getSnapshotById);
 router.get("/app/snapshots/:id/navigation", requireUser, getSnapshotNavigation);
+router.get("/app/snapshots", requireUser, getSnapshots);
 router.get("/app/flights/history", requireUser, getFlightHistory);
 router.get("/app/routes/info", requireUser, getRouteInfo);
 

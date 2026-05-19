@@ -19,10 +19,10 @@ export async function getLivePlanesSlovenia() {
   return await db.execute(
     `
     SELECT *
-FROM plane_live
-WHERE latitude IS NOT NULL
-  AND longitude IS NOT NULL
-  AND ST_Contains(
+    FROM plane_live
+    WHERE latitude IS NOT NULL
+    AND longitude IS NOT NULL
+    AND ST_Contains(
     ST_GeomFromGeoJSON(
       (
         SELECT geo_json
@@ -112,8 +112,8 @@ export async function getPlaneLiveByHex(hex: string) {
     .from(planeLive)
     .where(eq(planeLive.hex, hex))
     .limit(1);
-  
-    return plane ?? null;
+
+  return plane ?? null;
 }
 
 export async function createPlaneLive(input: PlaneLiveInput) {
@@ -153,8 +153,8 @@ export async function getPlaneSnapshotById(id: number) {
     .from(planeSnapshots)
     .where(eq(planeSnapshots.id, id))
     .limit(1);
-  
-    return plane ?? null;
+
+  return plane ?? null;
 }
 
 export async function createPlaneSnapshot(input: PlaneSnapshotInput) {
@@ -194,8 +194,8 @@ export async function getPlaneRouteById(id: number) {
     .from(planeRoutes)
     .where(eq(planeRoutes.id, id))
     .limit(1);
-  
-    return planeRoute ?? null;
+
+  return planeRoute ?? null;
 }
 
 export async function createPlaneRoute(input: PlaneRouteInput) {
@@ -235,8 +235,8 @@ export async function getSnapshotById(id: number) {
     .from(snapshots)
     .where(eq(snapshots.id, id))
     .limit(1);
-  
-    return snapshot ?? null;
+
+  return snapshot ?? null;
 }
 
 export async function createSnapshot(input: SnapshotInput) {
@@ -276,8 +276,8 @@ export async function getRegionById(id: number) {
     .from(geoRegions)
     .where(eq(geoRegions.id, id))
     .limit(1);
-  
-    return region ?? null;
+
+  return region ?? null;
 }
 
 export async function createRegion(input: GeoRegionInput) {
@@ -355,4 +355,67 @@ export async function getRouteInfo(hex: string, callsign: string) {
       )
     )
     .limit(1);
+}
+
+export async function getNearbyPlanes(lon: number, lat: number, radius: number) {
+  return await db.execute(
+    `
+    SELECT *
+    FROM plane_live
+    WHERE latitude IS NOT NULL
+    AND longitude IS NOT NULL
+    AND ST_DWithin(
+    ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography,
+    ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography,
+    ${radius}
+  );
+    `
+  );
+}
+
+export async function getStats() {
+  const [live] = await db.execute(`SELECT COUNT(*) FROM plane_live`);
+
+  const [slovenia] = await db.execute(
+    `
+    SELECT COUNT(*)
+    FROM plane_live
+    WHERE latitude IS NOT NULL
+      AND longitude IS NOT NULL
+      AND ST_Contains(
+      ST_GeomFromGeoJSON(
+      (
+        SELECT geo_json
+        FROM geo_regions
+        WHERE name = 'Slovenia'
+      )
+      ),
+      ST_SetSRID(
+      ST_MakePoint(longitude, latitude),
+      4326
+    )
+  );
+  `
+);
+
+  const [last24hSnapshotInfo] = await db.execute(
+    `
+    SELECT
+      COUNT(*) as snapshots,
+      ROUND(AVG(aircraft_count)) as avg_planes,
+      MAX(aircraft_count) as max_planes,
+      MIN(aircraft_count) as min_planes
+    FROM snapshots
+    WHERE snapshot_time >= NOW() - INTERVAL '24 hours';
+  `);
+
+  return {
+    live: {
+      planes_count: live.count,
+    },
+    slovenia: {
+      planes_count: slovenia.count,
+    },
+    last24h_snapshot_info: last24hSnapshotInfo,
+  };
 }
