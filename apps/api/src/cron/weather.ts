@@ -21,7 +21,7 @@ function toFloat(value: unknown): number | null {
 }
 
 function parseReadings(data: Record<string, any>, locationId: string) {
-  const rows = [];
+  const rows : any[] = [];
 
   const observation = data.observation?.features?.[0]?.properties?.days ?? [];
 
