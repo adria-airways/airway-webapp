@@ -12,6 +12,7 @@ import {
   desktopRefreshSchema,
   desktopRevokeSchema,
 } from "../validation/desktop.validation.js";
+import { createAccessToken, getTokenExpiry } from "../auth/desktop-tokens.js";
 
 function redirectAllowed(redirectUri: string) {
   try {
@@ -63,9 +64,17 @@ export async function exchangeCode(req: Request, res: Response) {
     orgId: result.orgId,
   });
 
+  const accessToken = createAccessToken({
+    userId: result.userId,
+    orgId: result.orgId,
+  });
+
   res.json({
+    accessToken,
     refreshToken: session.token,
+    expiresIn: getTokenExpiry(),
     expiresAt: session.expiresAt.toISOString(),
+    tokenType: "Bearer",
   });
 }
 
@@ -75,9 +84,17 @@ export async function refreshAppToken(req: Request, res: Response) {
     token: body.refreshToken,
   });
 
+  const accessToken = createAccessToken({
+    userId: session.userId,
+    orgId: session.orgId,
+  });
+
   res.json({
+    accessToken,
     refreshToken: session.token,
+    expiresIn: getTokenExpiry(),
     expiresAt: session.expiresAt.toISOString(),
+    tokenType: "Bearer",
   });
 }
 

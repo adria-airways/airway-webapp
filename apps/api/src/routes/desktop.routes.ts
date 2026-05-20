@@ -1,7 +1,10 @@
 import { Router } from "express";
 
 import { permissions } from "../auth/permissions.js";
-import { requirePermission } from "../middleware/auth.middleware.js";
+import {
+  requirePermission,
+  requireAccessToken,
+} from "../middleware/auth.middleware.js";
 
 import {
   exchangeCode,
@@ -41,16 +44,12 @@ router.post("/revoke", revokeAppToken);
  *       403:
  *         description: Forbidden.
  */
-router.get(
-  "/ping",
-  requirePermission(permissions.desktopAccess),
-  (req, res) => {
-    res.json({
-      message: "Desktop app is ready!",
-      userId: res.locals.userId,
-      orgId: res.locals.orgId,
-    });
-  },
-);
+router.get("/ping", requireAccessToken, (req, res) => {
+  res.json({
+    message: "Desktop app is ready!",
+    userId: res.locals.userId,
+    orgId: res.locals.orgId,
+  });
+});
 
 export default router;
