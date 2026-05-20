@@ -1,40 +1,24 @@
 import { Router } from "express";
 
 import { permissions } from "../auth/permissions.js";
+import { requirePermission } from "../middleware/auth.middleware.js";
+
 import {
-  requirePermission,
-  requireUser,
-} from "../middleware/auth.middleware.js";
+  exchangeCode,
+  login,
+  refreshAppToken,
+  revokeAppToken,
+} from "../controllers/desktop-auth.controller.js";
 
 const router = Router();
 
-router.get(
-  "/login",
-  requirePermission(permissions.desktopAccess),
-  (req, res) => {
-    res.status(501).json({
-      message: "Caki se malo no!",
-    });
-  },
-);
+router.get("/login", requirePermission(permissions.desktopAccess), login);
 
-router.post("/exchange", (req, res) => {
-  res.status(501).json({
-    message: "Caki se malo no!",
-  });
-});
+router.post("/exchange", exchangeCode);
 
-router.post("/refresh", (req, res) => {
-  res.status(501).json({
-    message: "Caki se malo no!",
-  });
-});
+router.post("/refresh", refreshAppToken);
 
-router.post("/revoke", (req, res) => {
-  res.status(501).json({
-    message: "Caki se malo no!",
-  });
-});
+router.post("/revoke", revokeAppToken);
 
 /**
  * @openapi

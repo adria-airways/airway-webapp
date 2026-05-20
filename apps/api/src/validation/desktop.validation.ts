@@ -3,7 +3,7 @@ import { z } from "zod";
 export const desktopLoginQuerySchema = z.object({
   redirectUri: z.string().url(),
   state: z.string().min(16).max(256),
-  codee: z.string().min(43).max(128),
+  codeChallenge: z.string().min(43).max(128),
   codeMethod: z.literal("S256"),
 });
 
