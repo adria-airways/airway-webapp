@@ -11,6 +11,8 @@ COPY apps ./apps
 COPY packages ./packages
 
 RUN pnpm install
+
+RUN pnpm --filter db build
 RUN pnpm --filter api build
 
 WORKDIR /app/apps/api
