@@ -3,6 +3,8 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@clerk/shared': true
+  '@scarf/scarf': true
   esbuild: true
 
 onlyBuiltDependencies:
