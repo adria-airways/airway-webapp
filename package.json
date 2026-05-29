@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "predev": "pnpm --filter db build",
     "dev": "concurrently \"pnpm --filter web dev\" \"pnpm --filter api dev\"",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api dev",
