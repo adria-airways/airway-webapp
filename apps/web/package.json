@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
+    "@clerk/react-router": "^3.3.2",
     "@clerk/themes": "^2.4.57",
     "@tailwindcss/vite": "^4.2.2",
     "@types/animejs": "^3.1.13",
     "animejs": "^4.4.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-router-dom": "^7.16.0",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
