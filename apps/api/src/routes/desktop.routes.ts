@@ -1,9 +1,27 @@
 import { Router } from "express";
 
 import { permissions } from "../auth/permissions.js";
-import { requirePermission } from "../middleware/auth.middleware.js";
+import {
+  requirePermission,
+  requireAccessToken,
+} from "../middleware/auth.middleware.js";
+
+import {
+  exchangeCode,
+  login,
+  refreshAppToken,
+  revokeAppToken,
+} from "../controllers/desktop-auth.controller.js";
 
 const router = Router();
+
+router.get("/login", requirePermission(permissions.desktopAccess), login);
+
+router.post("/exchange", exchangeCode);
+
+router.post("/refresh", refreshAppToken);
+
+router.post("/revoke", revokeAppToken);
 
 /**
  * @openapi
@@ -26,16 +44,12 @@ const router = Router();
  *       403:
  *         description: Forbidden.
  */
-router.get(
-  "/ping",
-  requirePermission(permissions.desktopAccess),
-  (req, res) => {
-    res.json({
-      message: "Desktop app is ready!",
-      userId: res.locals.userId,
-      orgId: res.locals.orgId,
-    });
-  },
-);
+router.get("/ping", requireAccessToken, (req, res) => {
+  res.json({
+    message: "Desktop app is ready!",
+    userId: res.locals.userId,
+    orgId: res.locals.orgId,
+  });
+});
 
 export default router;

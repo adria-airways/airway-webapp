@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
+import { verifyAccessToken } from "../auth/desktop-tokens.js";
 
 export function requireUser(req: Request, res: Response, next: NextFunction) {
   const auth = getAuth(req);
@@ -43,4 +44,32 @@ export function requirePermission(permission: string) {
 
     next();
   };
+}
+
+export function requireAccessToken(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const authorization = req.headers.authorization;
+
+  if (!authorization?.startsWith("Bearer ")) {
+    return res.status(401).json({
+      message: "Missing access token!",
+    });
+  }
+  const token = authorization.slice("Bearer ".length);
+
+  try {
+    const data = verifyAccessToken(token);
+    res.locals.userId = data.userId;
+    res.locals.orgId = data.orgId;
+    res.locals.authType = "desktop";
+
+    next();
+  } catch {
+    return res.status(401).json({
+      message: "Invalid access token!",
+    });
+  }
 }

@@ -71,6 +71,13 @@
       "when": 1778926660168,
       "tag": "0009_stormy_butterfly",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779307158985,
+      "tag": "0010_smiling_deathstrike",
+      "breakpoints": true
     }
   ]
 }
