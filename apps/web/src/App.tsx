@@ -1,14 +1,13 @@
-import { SignedIn, SignedOut, SignIn, UserButton } from "@clerk/clerk-react";
+import "./global.css"
+import { Routes, Route } from 'react-router-dom';
+import Landing  from "./components/landing";
+import Dashboard from "./components/dashboard";
 
 export default function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignedOut>
-        <SignIn />
-      </SignedOut>
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
-    </div>
+    <Routes>
+      <Route path="/" element={<Landing/>}/>
+      <Route path="/dashboard" element={<Dashboard/>}/>
+    </Routes>
   );
 }
