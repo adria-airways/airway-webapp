@@ -4,6 +4,7 @@ import { permissions } from "../auth/permissions.js";
 import {
   requirePermission,
   requireUser,
+  requireAccessPermission,
 } from "../middleware/auth.middleware.js";
 import * as weatherController from "../controllers/weather.controller.js";
 
@@ -34,7 +35,7 @@ const router = Router();
  */
 router.get(
   "/locations",
-  requirePermission(permissions.locationsRead),
+  requireAccessPermission(permissions.locationsRead),
   weatherController.listLocations,
 );
 
@@ -75,7 +76,7 @@ router.get(
  */
 router.get(
   "/locations/:id",
-  requirePermission(permissions.locationsRead),
+  requireAccessPermission(permissions.locationsRead),
   weatherController.getLocation,
 );
 
@@ -110,7 +111,7 @@ router.get(
  */
 router.post(
   "/locations",
-  requirePermission(permissions.locationsManage),
+  requireAccessPermission(permissions.locationsManage),
   weatherController.createLocation,
 );
 
@@ -159,7 +160,7 @@ router.post(
  */
 router.patch(
   "/locations/:id",
-  requirePermission(permissions.locationsManage),
+  requireAccessPermission(permissions.locationsManage),
   weatherController.updateLocation,
 );
 
@@ -200,7 +201,7 @@ router.patch(
  */
 router.delete(
   "/locations/:id",
-  requirePermission(permissions.locationsManage),
+  requireAccessPermission(permissions.locationsManage),
   weatherController.deleteLocation,
 );
 
@@ -266,7 +267,7 @@ router.delete(
  */
 router.get(
   "/readings",
-  requirePermission(permissions.weatherRead),
+  requireAccessPermission(permissions.weatherRead),
   weatherController.listReadings,
 );
 
@@ -308,7 +309,7 @@ router.get(
  */
 router.get(
   "/readings/:id",
-  requirePermission(permissions.weatherRead),
+  requireAccessPermission(permissions.weatherRead),
   weatherController.getReading,
 );
 
@@ -343,7 +344,7 @@ router.get(
  */
 router.post(
   "/readings",
-  requirePermission(permissions.weatherManage),
+  requireAccessPermission(permissions.weatherManage),
   weatherController.createReading,
 );
 
@@ -391,7 +392,7 @@ router.post(
  */
 router.patch(
   "/readings/:id",
-  requirePermission(permissions.weatherManage),
+  requireAccessPermission(permissions.weatherManage),
   weatherController.updateReading,
 );
 
@@ -433,7 +434,7 @@ router.patch(
  */
 router.delete(
   "/readings/:id",
-  requirePermission(permissions.weatherManage),
+  requireAccessPermission(permissions.weatherManage),
   weatherController.deleteReading,
 );
 
@@ -482,7 +483,7 @@ router.delete(
  */
 router.post(
   "/locations/:id/readings/bulk",
-  requirePermission(permissions.weatherManage),
+  requireAccessPermission(permissions.weatherManage),
   weatherController.bulkUpsertForLocation,
 );
 

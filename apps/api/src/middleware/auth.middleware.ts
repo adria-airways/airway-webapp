@@ -73,3 +73,35 @@ export function requireAccessToken(
     });
   }
 }
+
+function authenticateDesktopToken(req: Request, res: Response) {
+  const authorization = req.headers.authorization;
+
+  if (!authorization?.startsWith("Bearer ")) {
+    return false;
+  }
+  const token = authorization.slice("Bearer ".length);
+  const data = verifyAccessToken(token);
+
+  res.locals.userId = data.userId;
+  res.locals.orgId = data.orgId;
+  res.locals.authType = "desktop";
+
+  return true;
+}
+
+export function requireAccessPermission(permission: string) {
+  return function (req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!authenticateDesktopToken(req, res)) {
+        return next();
+      }
+    } catch {
+      return res.status(401).json({
+        message: "Invalid access token!",
+      });
+    }
+
+    return requirePermission(permission)(req, res, next);
+  };
+}
