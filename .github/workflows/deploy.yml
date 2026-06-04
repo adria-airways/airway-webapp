@@ -25,7 +25,7 @@ jobs:
 
       - name: Build and push WEB
         run: |
-          docker buildx build --platform linux/amd64 -f apps/web/Dockerfile.prod -t mrnejco/airway-web:latest --push .
+          docker buildx build --platform linux/amd64 -f apps/web/Dockerfile.prod --build-arg VITE_CLERK_PUBLISHABLE_KEY="${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}" --build-arg VITE_API_URL="${{ secrets.VITE_API_URL }}" -t mrnejco/airway-web:latest --push .
 
   deploy:
     runs-on: ubuntu-latest
