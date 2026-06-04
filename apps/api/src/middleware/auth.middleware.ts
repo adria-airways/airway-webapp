@@ -93,7 +93,7 @@ function authenticateDesktopToken(req: Request, res: Response) {
 export function requireAccessPermission(permission: string) {
   return function (req: Request, res: Response, next: NextFunction) {
     try {
-      if (!authenticateDesktopToken(req, res)) {
+      if (authenticateDesktopToken(req, res)) {
         return next();
       }
     } catch {
