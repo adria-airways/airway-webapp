@@ -41,6 +41,7 @@ import { permissions } from "../auth/permissions.js";
 import {
   requirePermission,
   requireUser,
+  requireAccessPermission,
 } from "../middleware/auth.middleware.js";
 
 const router = Router();
@@ -396,7 +397,11 @@ router.get("/app/routes/info", requireUser, getRouteInfo);
  *       403:
  *         description: Forbidden.
  */
-router.get("/live", requirePermission(permissions.planesRead), getAllLivePlanes);
+router.get(
+  "/live",
+  requireAccessPermission(permissions.planesRead),
+  getAllLivePlanes,
+);
 
 /**
  * @openapi
@@ -431,7 +436,11 @@ router.get("/live", requirePermission(permissions.planesRead), getAllLivePlanes)
  *       404:
  *         description: Plane not found.
  */
-router.get("/live/:hex", requirePermission(permissions.planesRead), getPlaneLiveByHex);
+router.get(
+  "/live/:hex",
+  requireAccessPermission(permissions.planesRead),
+  getPlaneLiveByHex,
+);
 
 /**
  * @openapi
@@ -462,7 +471,11 @@ router.get("/live/:hex", requirePermission(permissions.planesRead), getPlaneLive
  *       403:
  *         description: Forbidden.
  */
-router.post("/live", requirePermission(permissions.planesManage), createPlaneLive);
+router.post(
+  "/live",
+  requireAccessPermission(permissions.planesManage),
+  createPlaneLive,
+);
 
 /**
  * @openapi
@@ -503,7 +516,11 @@ router.post("/live", requirePermission(permissions.planesManage), createPlaneLiv
  *       404:
  *         description: Plane not found.
  */
-router.patch("/live/:hex", requirePermission(permissions.planesManage), updatePlaneLive);
+router.patch(
+  "/live/:hex",
+  requireAccessPermission(permissions.planesManage),
+  updatePlaneLive,
+);
 
 /**
  * @openapi
@@ -538,7 +555,11 @@ router.patch("/live/:hex", requirePermission(permissions.planesManage), updatePl
  *       404:
  *         description: Plane not found.
  */
-router.delete("/live/:hex", requirePermission(permissions.planesManage), deletePlaneLive);
+router.delete(
+  "/live/:hex",
+  requireAccessPermission(permissions.planesManage),
+  deletePlaneLive,
+);
 
 /**
  * @openapi
@@ -566,7 +587,11 @@ router.delete("/live/:hex", requirePermission(permissions.planesManage), deleteP
  *       403:
  *         description: Forbidden.
  */
-router.get("/plane-snapshots", requirePermission(permissions.planesRead), getPlaneSnapshot);
+router.get(
+  "/plane-snapshots",
+  requireAccessPermission(permissions.planesRead),
+  getPlaneSnapshot,
+);
 
 /**
  * @openapi
@@ -600,7 +625,11 @@ router.get("/plane-snapshots", requirePermission(permissions.planesRead), getPla
  *       404:
  *         description: Plane snapshot not found.
  */
-router.get("/plane-snapshots/:id", requirePermission(permissions.planesRead), getPlaneSnapshotById);
+router.get(
+  "/plane-snapshots/:id",
+  requireAccessPermission(permissions.planesRead),
+  getPlaneSnapshotById,
+);
 
 /**
  * @openapi
@@ -627,7 +656,11 @@ router.get("/plane-snapshots/:id", requirePermission(permissions.planesRead), ge
  *       403:
  *         description: Forbidden.
  */
-router.post("/plane-snapshots", requirePermission(permissions.planesManage), createPlaneSnapshot);
+router.post(
+  "/plane-snapshots",
+  requireAccessPermission(permissions.planesManage),
+  createPlaneSnapshot,
+);
 
 /**
  * @openapi
@@ -663,7 +696,11 @@ router.post("/plane-snapshots", requirePermission(permissions.planesManage), cre
  *       404:
  *         description: Plane snapshot not found.
  */
-router.patch("/plane-snapshots/:id", requirePermission(permissions.planesManage), updatePlaneSnapshot);
+router.patch(
+  "/plane-snapshots/:id",
+  requireAccessPermission(permissions.planesManage),
+  updatePlaneSnapshot,
+);
 
 /**
  * @openapi
@@ -693,7 +730,11 @@ router.patch("/plane-snapshots/:id", requirePermission(permissions.planesManage)
  *       404:
  *         description: Plane snapshot not found.
  */
-router.delete("/plane-snapshots/:id", requirePermission(permissions.planesManage), deletePlaneSnapshot);
+router.delete(
+  "/plane-snapshots/:id",
+  requireAccessPermission(permissions.planesManage),
+  deletePlaneSnapshot,
+);
 
 /**
  * @openapi
@@ -721,7 +762,11 @@ router.delete("/plane-snapshots/:id", requirePermission(permissions.planesManage
  *       403:
  *         description: Forbidden.
  */
-router.get("/snapshots", requirePermission(permissions.planesRead), getSnapshots);
+router.get(
+  "/snapshots",
+  requireAccessPermission(permissions.planesRead),
+  getSnapshots,
+);
 
 /**
  * @openapi
@@ -755,7 +800,11 @@ router.get("/snapshots", requirePermission(permissions.planesRead), getSnapshots
  *       404:
  *         description: Snapshot not found.
  */
-router.get("/snapshots/:id", requirePermission(permissions.planesRead), getSnapshotById);
+router.get(
+  "/snapshots/:id",
+  requireAccessPermission(permissions.planesRead),
+  getSnapshotById,
+);
 
 /**
  * @openapi
@@ -782,7 +831,11 @@ router.get("/snapshots/:id", requirePermission(permissions.planesRead), getSnaps
  *       403:
  *         description: Forbidden.
  */
-router.post("/snapshots", requirePermission(permissions.planesManage), createSnapshot);
+router.post(
+  "/snapshots",
+  requireAccessPermission(permissions.planesManage),
+  createSnapshot,
+);
 
 /**
  * @openapi
@@ -818,7 +871,11 @@ router.post("/snapshots", requirePermission(permissions.planesManage), createSna
  *       404:
  *         description: Snapshot not found.
  */
-router.patch("/snapshots/:id", requirePermission(permissions.planesManage), updateSnapshot);
+router.patch(
+  "/snapshots/:id",
+  requireAccessPermission(permissions.planesManage),
+  updateSnapshot,
+);
 
 /**
  * @openapi
@@ -848,7 +905,11 @@ router.patch("/snapshots/:id", requirePermission(permissions.planesManage), upda
  *       404:
  *         description: Snapshot not found.
  */
-router.delete("/snapshots/:id", requirePermission(permissions.planesManage), deleteSnapshot);
+router.delete(
+  "/snapshots/:id",
+  requireAccessPermission(permissions.planesManage),
+  deleteSnapshot,
+);
 
 /**
  * @openapi
@@ -876,7 +937,11 @@ router.delete("/snapshots/:id", requirePermission(permissions.planesManage), del
  *       403:
  *         description: Forbidden.
  */
-router.get("/routes", requirePermission(permissions.planesRead), getPlaneRoutes);
+router.get(
+  "/routes",
+  requireAccessPermission(permissions.planesRead),
+  getPlaneRoutes,
+);
 
 /**
  * @openapi
@@ -910,7 +975,11 @@ router.get("/routes", requirePermission(permissions.planesRead), getPlaneRoutes)
  *       404:
  *         description: Plane route not found.
  */
-router.get("/routes/:id", requirePermission(permissions.planesRead), getPlaneRouteById);
+router.get(
+  "/routes/:id",
+  requireAccessPermission(permissions.planesRead),
+  getPlaneRouteById,
+);
 
 /**
  * @openapi
@@ -937,7 +1006,11 @@ router.get("/routes/:id", requirePermission(permissions.planesRead), getPlaneRou
  *       403:
  *         description: Forbidden.
  */
-router.post("/routes", requirePermission(permissions.planesManage), createPlaneRoute);
+router.post(
+  "/routes",
+  requireAccessPermission(permissions.planesManage),
+  createPlaneRoute,
+);
 
 /**
  * @openapi
@@ -973,7 +1046,11 @@ router.post("/routes", requirePermission(permissions.planesManage), createPlaneR
  *       404:
  *         description: Plane route not found.
  */
-router.patch("/routes/:id", requirePermission(permissions.planesManage), updatePlaneRoute);
+router.patch(
+  "/routes/:id",
+  requireAccessPermission(permissions.planesManage),
+  updatePlaneRoute,
+);
 
 /**
  * @openapi
@@ -1003,7 +1080,11 @@ router.patch("/routes/:id", requirePermission(permissions.planesManage), updateP
  *       404:
  *         description: Plane route not found.
  */
-router.delete("/routes/:id", requirePermission(permissions.planesManage), deletePlaneRoute);
+router.delete(
+  "/routes/:id",
+  requireAccessPermission(permissions.planesManage),
+  deletePlaneRoute,
+);
 
 /**
  * @openapi
@@ -1031,7 +1112,11 @@ router.delete("/routes/:id", requirePermission(permissions.planesManage), delete
  *       403:
  *         description: Forbidden.
  */
-router.get("/regions", requirePermission(permissions.planesRead), getRegions);
+router.get(
+  "/regions",
+  requireAccessPermission(permissions.planesRead),
+  getRegions,
+);
 
 /**
  * @openapi
@@ -1065,7 +1150,11 @@ router.get("/regions", requirePermission(permissions.planesRead), getRegions);
  *       404:
  *         description: Geo region not found.
  */
-router.get("/regions/:id", requirePermission(permissions.planesRead), getRegionById);
+router.get(
+  "/regions/:id",
+  requireAccessPermission(permissions.planesRead),
+  getRegionById,
+);
 
 /**
  * @openapi
@@ -1092,7 +1181,11 @@ router.get("/regions/:id", requirePermission(permissions.planesRead), getRegionB
  *       403:
  *         description: Forbidden.
  */
-router.post("/regions", requirePermission(permissions.planesManage), createRegion);
+router.post(
+  "/regions",
+  requireAccessPermission(permissions.planesManage),
+  createRegion,
+);
 
 /**
  * @openapi
@@ -1128,7 +1221,11 @@ router.post("/regions", requirePermission(permissions.planesManage), createRegio
  *       404:
  *         description: Geo region not found.
  */
-router.patch("/regions/:id", requirePermission(permissions.planesManage), updateRegion);
+router.patch(
+  "/regions/:id",
+  requireAccessPermission(permissions.planesManage),
+  updateRegion,
+);
 
 /**
  * @openapi
@@ -1158,7 +1255,11 @@ router.patch("/regions/:id", requirePermission(permissions.planesManage), update
  *       404:
  *         description: Geo region not found.
  */
-router.delete("/regions/:id", requirePermission(permissions.planesManage), deleteRegion);
+router.delete(
+  "/regions/:id",
+  requireAccessPermission(permissions.planesManage),
+  deleteRegion,
+);
 
 /**
  * @openapi
@@ -1189,7 +1290,11 @@ router.delete("/regions/:id", requirePermission(permissions.planesManage), delet
  *       403:
  *         description: Forbidden.
  */
-router.post("/live/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneLive);
+router.post(
+  "/live/bulk",
+  requireAccessPermission(permissions.planesManage),
+  bulkInsertPlaneLive,
+);
 
 /**
  * @openapi
@@ -1220,7 +1325,11 @@ router.post("/live/bulk", requirePermission(permissions.planesManage), bulkInser
  *       403:
  *         description: Forbidden.
  */
-router.post("/plane-snapshots/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneSnapshot);
+router.post(
+  "/plane-snapshots/bulk",
+  requireAccessPermission(permissions.planesManage),
+  bulkInsertPlaneSnapshot,
+);
 
 /**
  * @openapi
@@ -1251,6 +1360,10 @@ router.post("/plane-snapshots/bulk", requirePermission(permissions.planesManage)
  *       403:
  *         description: Forbidden.
  */
-router.post("/routes/bulk", requirePermission(permissions.planesManage), bulkInsertPlaneRoute);
+router.post(
+  "/routes/bulk",
+  requireAccessPermission(permissions.planesManage),
+  bulkInsertPlaneRoute,
+);
 
 export default router;
