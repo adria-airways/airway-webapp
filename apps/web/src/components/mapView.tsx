@@ -2,7 +2,19 @@ import { MapContainer, TileLayer } from 'react-leaflet'
 import WeatherStationsLayer from './weatherStationsLayer'
 import PlaneMap from './planeMap'
 
-export default function MapView(){
+import {
+  type Planes
+} from "../lib/planeApi";
+
+export default function MapView({
+    planes, 
+    tokenSnapshot,
+    selectedPlane
+}: { 
+    planes: Planes[]; 
+    tokenSnapshot: string | null;
+    selectedPlane: string | null;
+}){
     return(
         <div className="flex flex-col h-full w-full overflow-hidden">
             <MapContainer 
@@ -15,8 +27,12 @@ export default function MapView(){
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
+                <PlaneMap
+                    planes={planes}
+                    tokenSnapshot={tokenSnapshot}
+                    selectedPlane={selectedPlane}
+                />
                 <WeatherStationsLayer />
-                <PlaneMap />
                 
             </MapContainer>
         </div>

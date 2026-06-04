@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import { Marker, Popup } from "react-leaflet";
-import { useAuth } from "@clerk/clerk-react";
 
 import "../global.css";
 import planeIcon from "../assets/plane.png";
 
 import {
-  getPlaneLocations,
   getPlaneRouteInfo,
   type Planes,
   type PlaneRoute
 } from "../lib/planeApi";
+import { useMap } from "react-leaflet";
 
+
+// Marker
 function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
-  const { hex, longitude, latitude, callsign, heading, origin_country } = plane;
+  const { hex, longitude, latitude, callsign, heading, originCountry } = plane;
   const [route, setRoute] = useState<PlaneRoute | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -44,20 +45,19 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
 
     setLoading(true);
     try {
-      const responseData = await getPlaneRouteInfo(token, hex, callsign);
+        const responseData = await getPlaneRouteInfo(token, hex, callsign);
 
-      const cleanRoute =
-        responseData &&
-        typeof responseData === "object" &&
-        "data" in responseData
-          ? (responseData as any).data
-          : responseData;
+        const rawData = responseData && typeof responseData === "object" && "data" in responseData
+            ? (responseData as any).data
+            : responseData;
 
-      setRoute(cleanRoute);
-    } catch (err) {
+        const cleanRoute = Array.isArray(rawData) ? rawData[0] : rawData;
+
+        setRoute(cleanRoute);
+    }   catch (err) {
       console.error(`Failed loading route records for ${callsign}:`, err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   };
 
@@ -69,7 +69,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
     >
       <Popup>
         <div>
-          <h3>{callsign || "Unknown Callsign"}</h3>
+          <h3 className="text-center">{callsign || "Unknown Callsign"}</h3>
 
           {loading && (
             <p className="text-xs text-gray-500 animate-pulse">
@@ -78,10 +78,23 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
           )}
 
           {!loading && route ? (
-            <p className="text-blue-600 font-medium my-1">
-              {route.flying_from_country || route.flying_from_city || "Unknown"} →
-              {route.flying_to_country || route.flying_to_city || "Unknown"}
-            </p>
+            <div>
+                {!loading && route.airline ? (
+                    <div>
+                        <p className="text-center">{route.airline || "Unknown Airline"}</p>
+                    </div>
+                ) : null}
+                
+                <div className="text-center">
+                    <p className="text-blue-600 font-medium">
+                      {route.flyingFromCountry || "Unknown"}, {route.flyingFromCity || "Unknown"}
+                    </p>
+                    <p className="m-2">↓</p>
+                    <p className="text-blue-600 font-medium">
+                      {route.flyingToCountry || "Unknown"}, {route.flyingToCity || "Unknown"}
+                    </p>
+                </div>
+            </div>
           ) : (
             !loading && (
               <p className="text-xs text-gray-400 italic my-1">
@@ -90,7 +103,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
             )
           )}
 
-          <p>Origin: {origin_country || "Not Specified"}</p>
+          <p>Origin: {originCountry || "Not Specified"}</p>
           <p>
             Pos: {Number(latitude).toFixed(4)}, {Number(longitude).toFixed(4)}
           </p>
@@ -100,84 +113,65 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
   );
 }
 
-// MAIN COMPONENT
-export default function PlaneMap() {
-  const { getToken } = useAuth();
-  const [planes, setPlanes] = useState<Planes[]>([]);
-  const [tokenSnapshot, setTokenSnapshot] = useState<string | null>(null);
+// Main
+export default function PlaneMap({
+    planes, 
+    tokenSnapshot,
+    selectedPlane
+}: { 
+    planes: Planes[]; 
+    tokenSnapshot: string | null;
+    selectedPlane: string | null;
+}) {
+    const map = useMap();
 
-  useEffect(() => {
-    let cancelled = false;
+    // Prevent re-zooming
+    const lastFlownTo = useRef<string | null>(null);
 
-    async function fetchPlanes() {
-      try {
-        const token = await getToken();
-        if (!token || cancelled) return;
-
-        setTokenSnapshot(token);
-
-        const responseData = await getPlaneLocations(token);
-
-        let planeArray: any[] = [];
-
-        if (responseData?.data && Array.isArray(responseData.data)) {
-          planeArray = responseData.data;
-        } else if (Array.isArray(responseData)) {
-          planeArray = responseData;
+    // Pan to selected plane
+    useEffect(() => {
+        if(!selectedPlane){
+            lastFlownTo.current = null;
+            return;
         }
 
-        const normalized: Planes[] = planeArray.map((p: any) => ({
-          hex: p.plane_live.hex,
-          callsign: p.plane_live.callsign ?? "UNKNOWN",
-          latitude: Number(p.plane_live.latitude ?? p.plane_live?.latitude),
-          longitude: Number(p.plane_live.longitude ?? p.plane_live?.longitude),
-          origin_country: p.plane_live.origin_country ?? p.plane_live?.origin_country ?? "Unknown",
-          heading: Number(p.plane_live.heading ?? p.plane_live?.heading ?? 0),
-          ground_speed: Number(p.plane_live.ground_speed ?? p.plane_live?.ground_speed ?? 0),
-        }));
+        if(selectedPlane === lastFlownTo.current){
+            return;
+        }
 
-        setPlanes((prev) => {
-          if (!normalized.length && prev.length > 0) return prev;
-          return normalized;
+        const targetPlane = planes.find((p) => p.hex === selectedPlane);
+
+        if(targetPlane){
+            map.flyTo([targetPlane.latitude, targetPlane.longitude], 12, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+
+            lastFlownTo.current = selectedPlane;
+        }
+    }, [selectedPlane, planes, map])
+
+    const validPlanes = useMemo(() => {
+        const filtered = planes.filter((plane) => {
+            const lat = Number(plane.latitude);
+            const lon = Number(plane.longitude);
+
+            return Number.isFinite(lat) && Number.isFinite(lon);
         });
-      } catch (error) {
-        console.error("Locations layer polling breakdown:", error);
-      }
-    }
 
-    fetchPlanes();
-    const interval = setInterval(fetchPlanes, 10000);
+        return filtered;
+    }, [planes]);
 
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [getToken]);
-
-  const validPlanes = useMemo(() => {
-    const filtered = planes.filter((plane) => {
-      const lat = Number(plane.latitude);
-      const lon = Number(plane.longitude);
-
-      return Number.isFinite(lat) && Number.isFinite(lon);
-    });
-
-    console.log("RAW PLANES:", planes.length);
-    console.log("VALID PLANES:", filtered.length);
-
-    return filtered;
-  }, [planes]);
-
-  return (
-    <>
-      {tokenSnapshot &&
-        validPlanes.map((plane) => (
-          <LivePlaneMarker
-            key={plane.hex ?? `${plane.latitude}-${plane.longitude}`}
-            plane={plane}
-            token={tokenSnapshot}
-          />
-        ))}
-    </>
-  );
+    return (
+        <>
+        {tokenSnapshot &&
+            validPlanes.map((plane) => (
+            <LivePlaneMarker
+                key={plane.hex ?? `${plane.latitude}-${plane.longitude}`}
+                plane={plane}
+                token={tokenSnapshot}
+            />
+            ))}
+        </>
+    );
 }

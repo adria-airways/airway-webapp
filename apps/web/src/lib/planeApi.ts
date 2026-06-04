@@ -4,19 +4,19 @@ export interface Planes {
   latitude: number;
   longitude: number;
   altitude?: string;
-  origin_country: string;
+  originCountry: string;
   heading: number;
-  ground_speed: number;
+  groundSpeed: number;
 }
 
 export interface PlaneRoute {
   hex: string;
   callsign: string;
-  airline: string; // Fixed typo from 'airling'
-  flying_from_city: string;
-  flying_from_country: string;
-  flying_to_city: string;
-  flying_to_country: string;
+  airline: string;
+  flyingFromCity: string;
+  flyingFromCountry: string;
+  flyingToCity: string;
+  flyingToCountry: string;
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
