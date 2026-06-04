@@ -1,0 +1,22 @@
+ALTER TABLE "plane_live" DROP COLUMN "airline";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_from_country";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_from_latitude";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_from_longitude";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_from_city";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_from_airport";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_to_country";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_to_latitude";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_to_longitude";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_to_city";--> statement-breakpoint
+ALTER TABLE "plane_live" DROP COLUMN "flying_to_airport";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "airline";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_from_country";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_from_latitude";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_from_longitude";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_from_city";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_from_airport";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_to_country";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_to_latitude";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_to_longitude";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_to_city";--> statement-breakpoint
+ALTER TABLE "plane_snapshots" DROP COLUMN "flying_to_airport";

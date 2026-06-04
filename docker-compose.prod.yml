@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  api:
+    image: mrnejco/airway-api:latest
+    ports:
+      - "8080:3001"
+    env_file:
+      - packages/db/.env
+    restart: unless-stopped
+
+  web:
+    image: mrnejco/airway-web:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped

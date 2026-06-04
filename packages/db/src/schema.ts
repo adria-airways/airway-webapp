@@ -1,8 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export * from "./schema/weather/index.js";
+export * from "./schema/planes/index.js";
+export * from "./schema/regions/index.js";
+export * from "./schema/auth/index.js";
