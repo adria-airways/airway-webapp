@@ -68,7 +68,7 @@ pnpm dev
 
 ---
 
-## Scripts
+## Usable Scripts
 
 ```bash
 pnpm dev        # frontend + backend
