@@ -167,7 +167,13 @@ export async function getCurrentWeatherForLocation(locationId: string) {
   const [current] = await db
     .select()
     .from(readings)
-    .where(eq(readings.locationId, locationId))
+    .where(
+      and(
+        eq(readings.locationId, locationId),
+        eq(readings.resolution, "obs"),
+        lte(readings.validAt, new Date()),
+      ),
+    )
     .orderBy(desc(readings.validAt))
     .limit(1);
 
