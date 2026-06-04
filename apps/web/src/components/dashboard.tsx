@@ -1,6 +1,7 @@
 import "../global.css"
 import { UserButton, useUser } from "@clerk/clerk-react"
-import PlaneMap from "./planeMap";
+import MapView from "./mapView";
+import 'leaflet/dist/leaflet.css';
 
 export default function Dashboard(){
     const { user } = useUser();
@@ -17,7 +18,7 @@ export default function Dashboard(){
                 </div>
             </header>
             <div className="grow w-full">
-                <PlaneMap/>
+                <MapView/>
             </div>
             <footer></footer>
         </div>
