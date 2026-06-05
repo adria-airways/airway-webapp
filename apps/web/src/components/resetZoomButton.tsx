@@ -10,7 +10,7 @@ export function ResetZoomButton() {
   };
 
   return (
-    <div className="absolute top-20 left-3 z-[1000]">
+    <div className="absolute top-20 left-3 z-1000">
       <button
         onClick={resetView}
         className="bg-white px-3 py-1 rounded shadow text-sm font-medium hover:bg-gray-100"

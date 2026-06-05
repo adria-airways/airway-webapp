@@ -21,15 +21,21 @@ function SidebarCard({plane, token, isSelected, onClick}: SidebarCardProps){
     useEffect(() => {
         const normalizedCallsign = plane.callsign?.toUpperCase().trim();
 
-        if(!token || !normalizedCallsign || normalizedCallsign == "Unknown") return;
+        if(!token || !normalizedCallsign || normalizedCallsign == "UNKNOWN") return;
 
         setLoading(true);
-        getPlaneRouteInfo(token, plane.hex, plane.callsign).then(res => {
-            const data = Array.isArray(res) ? res[0] : res;
-            setRoute(data);
-        })
-        .catch((err) => console.error("Error fetching card route:", err))
-        .finally(() => setLoading(false));
+        getPlaneRouteInfo(token, plane.hex, plane.callsign)
+            .then((res) => {
+                const rawData = res && typeof res === "object" && "data" in res
+                    ? (res as any).data
+                    : res;
+
+                const cleanRoute = Array.isArray(rawData) ? rawData[0] : rawData;
+
+                setRoute(cleanRoute);
+            })
+            .catch((err) => console.error("Error fetching card route:", err))
+            .finally(() => setLoading(false));
     }, [plane.hex, plane.callsign, token]);
 
     return (
