@@ -5,11 +5,36 @@ import { useState } from 'react'
 import { ResetZoomButton } from './resetZoomButton'
 import { MapLegend } from './mapLegend'
 import { LayerToggle } from "./layerToggle";
+import { MapStyleToggle } from './mapStyleToggle'
+
+export type MapStyle = "standard" | "dark" | "topography" | "satellite";
+
+const MAP_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
+  standard: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; OpenStreetMap contributors',
+  },
+
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; CARTO',
+  },
+
+  topography: {
+    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; OpenTopoMap',
+  },
+  satellite: {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Tiles © Esri",
+  },
+};
 
 export default function MapView() {
 
     const [showWeatherStations, setShowWeatherStations] = useState(true)
     const [showPlanes, setShowPlanes] = useState(true)
+    const [mapStyle, setMapStyle] = useState<MapStyle>("standard");
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
@@ -19,8 +44,8 @@ export default function MapView() {
                 style={{ height: "100%", width: "100%" }}
             >
                 <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution={MAP_LAYERS[mapStyle].attribution}
+                    url={MAP_LAYERS[mapStyle].url}
                 />
 
                 <WeatherStationsLayer visible={showWeatherStations} />
@@ -47,7 +72,12 @@ export default function MapView() {
                     activeColor="bg-yellow-300"
                 />
 
+                <MapStyleToggle 
+                    active = {mapStyle}
+                    setActive={setMapStyle}
+                />
             </div>
+
         </div>
     )
 }
