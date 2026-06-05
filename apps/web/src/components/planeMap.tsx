@@ -101,7 +101,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
 }
 
 // MAIN COMPONENT
-export default function PlaneMap() {
+export default function PlaneMap({ visible }: { visible: boolean }) {
   const { getToken } = useAuth();
   const [planes, setPlanes] = useState<Planes[]>([]);
   const [tokenSnapshot, setTokenSnapshot] = useState<string | null>(null);
@@ -169,15 +169,16 @@ export default function PlaneMap() {
   }, [planes]);
 
   return (
-    <>
-      {tokenSnapshot &&
-        validPlanes.map((plane) => (
-          <LivePlaneMarker
-            key={plane.hex ?? `${plane.latitude}-${plane.longitude}`}
-            plane={plane}
-            token={tokenSnapshot}
-          />
-        ))}
-    </>
-  );
+  <>
+    {visible &&
+      tokenSnapshot &&
+      validPlanes.map((plane) => (
+        <LivePlaneMarker
+          key={plane.hex ?? `${plane.latitude}-${plane.longitude}`}
+          plane={plane}
+          token={tokenSnapshot}
+        />
+      ))}
+  </>
+);
 }
