@@ -186,6 +186,27 @@ export async function getPlaneSnapshotById(req: Request, res: Response) {
   res.json(plane);
 }
 
+export async function getPlanesFromSnapshotById(req: Request, res: Response) {
+  const parsed = planeIdParameterSchema.safeParse(req.params);
+
+  if(!parsed.success){
+    return res.status(400).json({
+      message: "Invalid id parameter",
+      errors: parsed.error
+    });
+  }
+
+  const data = await planesService.getPlanesFromSnapshotById(parsed.data.id);
+
+  if(data.length === 0){
+    return res.status(404).json({
+        message: "Snapshot with that id not found!",
+      });
+  }
+
+  res.json({ data });
+}
+
 export async function createPlaneSnapshot(req: Request, res: Response) {
   const parsed = createPlaneSnapshotSchema.safeParse(req.body);
 
