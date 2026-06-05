@@ -39,7 +39,7 @@ function formatCurrent(reading?: WeatherReading | null) {
   return parts.length > 0 ? parts.join(", ") : "Current reading available";
 }
 
-export default function WeatherStationsLayer() {
+export default function WeatherStationsLayer({ visible }: { visible: boolean }) {
   const { getToken } = useAuth();
   const [locations, setLocations] = useState<WeatherLocation[]>([]);
   const [currentByLocation, setCurrentByLocation] = useState<
@@ -109,8 +109,9 @@ export default function WeatherStationsLayer() {
   }
 
   return (
-    <>
-      {validLocations.map((location) => {
+  <>
+    {visible &&
+      validLocations.map((location) => {
         const current = currentByLocation[location.id];
 
         return (
@@ -134,6 +135,6 @@ export default function WeatherStationsLayer() {
           </Marker>
         );
       })}
-    </>
-  );
+  </>
+);
 }
