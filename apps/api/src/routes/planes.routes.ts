@@ -22,6 +22,7 @@ import {
   getPlaneLiveByHex,
   getPlaneRouteById,
   getPlaneRoutes,
+  getPlanesFromSnapshotById,
   getPlaneSnapshot,
   getPlaneSnapshotById,
   getRegionById,
@@ -226,6 +227,38 @@ router.get("/app/snapshots/latest", requireUser, getLatestSnapshot);
  *         description: Snapshot not found.
  */
 router.get("/app/snapshots/:id", requireUser, getSnapshotById);
+
+/**
+ * @openapi
+ * /planes/app/plane-snapshots/{id}:
+ *   get:
+ *     tags:
+ *       - Planes App
+ *     summary: Get all planes in snapshot by snapshot id
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *     responses:
+ *       200:
+ *         description: Snapshot with planes returned.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/PlaneSnapshot"
+ *       400:
+ *         description: Invalid path parameter.
+ *       401:
+ *         description: Unauthorized.
+ *       404:
+ *         description: Snapshot with that id not found.
+ */
+router.get("/app/plane-snapshots/:id", requireUser, getPlanesFromSnapshotById);
 
 /**
  * @openapi

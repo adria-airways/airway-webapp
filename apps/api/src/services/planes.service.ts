@@ -156,6 +156,13 @@ export async function getPlaneSnapshotById(id: number) {
   return plane ?? null;
 }
 
+export async function getPlanesFromSnapshotById(id: number) {
+  return await db
+    .select()
+    .from(planeSnapshots)
+    .where(eq(planeSnapshots.snapshotId, id));
+}
+
 export async function createPlaneSnapshot(input: PlaneSnapshotInput) {
   const [plane] = await db.insert(planeSnapshots).values(input).returning();
 
