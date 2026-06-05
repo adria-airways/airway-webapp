@@ -91,9 +91,10 @@ export default function MapView({
                 />
 
                 <ResetZoomButton />
-                <MapLegend />
 
             </MapContainer>
+
+            <MapLegend />
 
             <div className="absolute bottom-6 right-4 z-1000 flex gap-2">
 
