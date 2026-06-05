@@ -115,16 +115,18 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
 
 // Main
 export default function PlaneMap({
+    visible,
     planes, 
     tokenSnapshot,
     selectedPlane
-}: { 
+}: {
+    visible: boolean;
     planes: Planes[]; 
     tokenSnapshot: string | null;
     selectedPlane: string | null;
 }) {
     const map = useMap();
-
+    
     // Prevent re-zooming
     const lastFlownTo = useRef<string | null>(null);
 
@@ -164,7 +166,7 @@ export default function PlaneMap({
 
     return (
         <>
-        {tokenSnapshot &&
+        {visible && tokenSnapshot &&
             validPlanes.map((plane) => (
             <LivePlaneMarker
                 key={plane.hex ?? `${plane.latitude}-${plane.longitude}`}

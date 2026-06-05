@@ -1,6 +1,34 @@
 import { MapContainer, TileLayer } from 'react-leaflet'
 import WeatherStationsLayer from './weatherStationsLayer'
 import PlaneMap from './planeMap'
+import { useState } from 'react'
+import { ResetZoomButton } from './resetZoomButton'
+import { MapLegend } from './mapLegend'
+import { LayerToggle } from "./layerToggle";
+import { MapStyleToggle } from './mapStyleToggle'
+
+export type MapStyle = "standard" | "dark" | "topography" | "satellite";
+
+const MAP_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
+  standard: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; OpenStreetMap contributors',
+  },
+
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: '&copy; CARTO',
+  },
+
+  topography: {
+    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; OpenTopoMap',
+  },
+  satellite: {
+  url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  attribution: "Tiles © Esri",
+  },
+};
 
 import {
   type Planes
@@ -15,26 +43,58 @@ export default function MapView({
     tokenSnapshot: string | null;
     selectedPlane: string | null;
 }){
-    return(
+
+    const [showWeatherStations, setShowWeatherStations] = useState(true)
+    const [showPlanes, setShowPlanes] = useState(true)
+    const [mapStyle, setMapStyle] = useState<MapStyle>("standard");
+
+    return (
         <div className="flex flex-col h-full w-full overflow-hidden">
-            <MapContainer 
-                center={[46.151, 14.835]} 
-                zoom={9} 
+            <MapContainer
+                center={[46.151, 14.835]}
+                zoom={9}
                 style={{ height: "100%", width: "100%" }}
             >
                 <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution={MAP_LAYERS[mapStyle].attribution}
+                    url={MAP_LAYERS[mapStyle].url}
                 />
 
-                <PlaneMap
+                <WeatherStationsLayer visible={showWeatherStations} />
+                <PlaneMap 
+                    visible={showPlanes}
                     planes={planes}
                     tokenSnapshot={tokenSnapshot}
-                    selectedPlane={selectedPlane}
+                    selectedPlane={selectedPlane}    
                 />
-                <WeatherStationsLayer />
-                
+
+                <ResetZoomButton />
+                <MapLegend />
+
             </MapContainer>
+
+            <div className="absolute bottom-6 right-4 z-1000 flex gap-2">
+
+                <LayerToggle
+                    label="Weather"
+                    active={showWeatherStations}
+                    onChange={() => setShowWeatherStations(v => !v)}
+                    activeColor="bg-sky-500"
+                />
+
+                <LayerToggle
+                    label="Planes"
+                    active={showPlanes}
+                    onChange={() => setShowPlanes(v => !v)}
+                    activeColor="bg-yellow-300"
+                />
+
+                <MapStyleToggle 
+                    active = {mapStyle}
+                    setActive={setMapStyle}
+                />
+            </div>
+
         </div>
     )
 }

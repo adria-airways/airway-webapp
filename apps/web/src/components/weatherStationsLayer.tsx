@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import { useAuth } from "@clerk/clerk-react";
 import L from "leaflet";
+import { WEATHER_DOT_STYLE } from "../mapStyles";
 
 import {
   getCurrentWeather,
@@ -11,16 +12,14 @@ import {
 } from "../lib/weatherApi";
 
 const weatherStationIcon = L.divIcon({
-  html: `
-    <div style="
-      width: 18px;
-      height: 18px;
-      border-radius: 9999px;
-      background: #0ea5e9;
-      border: 2px solid white;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.35);
-    "></div>
-  `,
+  html: `<div style="
+    width: ${WEATHER_DOT_STYLE.width}px;
+    height: ${WEATHER_DOT_STYLE.height}px;
+    border-radius: ${WEATHER_DOT_STYLE.borderRadius};
+    background: ${WEATHER_DOT_STYLE.background};
+    border: ${WEATHER_DOT_STYLE.border};
+    box-shadow: ${WEATHER_DOT_STYLE.boxShadow};
+  "></div>`,
   className: "bg-transparent border-none",
   iconSize: [18, 18],
   iconAnchor: [9, 9],
@@ -39,7 +38,7 @@ function formatCurrent(reading?: WeatherReading | null) {
   return parts.length > 0 ? parts.join(", ") : "Current reading available";
 }
 
-export default function WeatherStationsLayer() {
+export default function WeatherStationsLayer({ visible }: { visible: boolean }) {
   const { getToken } = useAuth();
   const [locations, setLocations] = useState<WeatherLocation[]>([]);
   const [currentByLocation, setCurrentByLocation] = useState<
@@ -109,8 +108,9 @@ export default function WeatherStationsLayer() {
   }
 
   return (
-    <>
-      {validLocations.map((location) => {
+  <>
+    {visible &&
+      validLocations.map((location) => {
         const current = currentByLocation[location.id];
 
         return (
@@ -134,6 +134,6 @@ export default function WeatherStationsLayer() {
           </Marker>
         );
       })}
-    </>
-  );
+  </>
+);
 }
