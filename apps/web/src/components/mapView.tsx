@@ -4,6 +4,7 @@ import PlaneMap from './planeMap'
 import { useState } from 'react'
 import { ResetZoomButton } from './resetZoomButton'
 import { MapLegend } from './mapLegend'
+import { LayerToggle } from "./layerToggle";
 
 export default function MapView() {
 
@@ -32,25 +33,19 @@ export default function MapView() {
 
             <div className="absolute bottom-6 right-4 z-[1000] flex gap-2">
 
-                <button
-                    onClick={() => setShowWeatherStations(v => !v)}
-                    className={`px-3 py-1 rounded-full text-sm transition ${showWeatherStations
-                            ? "bg-sky-500 text-white"
-                            : "bg-white text-gray-700"
-                        }`}
-                >
-                    Weather
-                </button>
+                <LayerToggle
+                    label="Weather"
+                    active={showWeatherStations}
+                    onChange={() => setShowWeatherStations(v => !v)}
+                    activeColor="bg-sky-500"
+                />
 
-                <button
-                    onClick={() => setShowPlanes(v => !v)}
-                    className={`px-3 py-1 rounded-full text-sm transition ${showPlanes
-                            ? "bg-yellow-300 text-white"
-                            : "bg-white text-gray-700"
-                        }`}
-                >
-                    Planes
-                </button>
+                <LayerToggle
+                    label="Planes"
+                    active={showPlanes}
+                    onChange={() => setShowPlanes(v => !v)}
+                    activeColor="bg-yellow-300"
+                />
 
             </div>
         </div>
