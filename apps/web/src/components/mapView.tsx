@@ -2,6 +2,7 @@ import { MapContainer, TileLayer } from 'react-leaflet'
 import WeatherStationsLayer from './weatherStationsLayer'
 import PlaneMap from './planeMap'
 import { useState } from 'react'
+import { ResetZoomButton } from './resetZoomButton'
 
 export default function MapView() {
 
@@ -22,6 +23,8 @@ export default function MapView() {
 
                 <WeatherStationsLayer visible={showWeatherStations} />
                 <PlaneMap visible={showPlanes} />
+
+                <ResetZoomButton />
 
             </MapContainer>
             <div className="absolute bottom-6 right-4 z-[1000] flex gap-2">
