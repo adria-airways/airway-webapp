@@ -3,6 +3,7 @@ import WeatherStationsLayer from './weatherStationsLayer'
 import PlaneMap from './planeMap'
 import { useState } from 'react'
 import { ResetZoomButton } from './resetZoomButton'
+import { MapLegend } from './mapLegend'
 
 export default function MapView() {
 
@@ -25,8 +26,10 @@ export default function MapView() {
                 <PlaneMap visible={showPlanes} />
 
                 <ResetZoomButton />
+                <MapLegend />
 
             </MapContainer>
+
             <div className="absolute bottom-6 right-4 z-[1000] flex gap-2">
 
                 <button
