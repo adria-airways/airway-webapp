@@ -1,7 +1,7 @@
 import { MapContainer, TileLayer } from 'react-leaflet'
 import WeatherStationsLayer from './weatherStationsLayer'
 import PlaneMap from './planeMap'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ResetZoomButton } from './resetZoomButton'
 import { MapLegend } from './mapLegend'
 import { LayerToggle } from "./layerToggle";
@@ -33,6 +33,26 @@ const MAP_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
 import {
   type Planes
 } from "../lib/planeApi";
+import { useMap } from 'react-leaflet'
+
+function PaneInitializer(){
+    const map = useMap()
+
+    useEffect(() => {
+        if(!map.getPane('weatherPane')){
+            const weatherPane = map.createPane('weatherPane');
+            weatherPane.style.zIndex = '450';
+            weatherPane.style.pointerEvents = 'none'
+        }
+
+        if(!map.getPane('planePane')){
+            const planePane = map.createPane('planePane');
+            planePane.style.zIndex = '650';
+        }
+    }, [map]);
+
+    return null;
+}
 
 export default function MapView({
     planes, 
@@ -55,6 +75,8 @@ export default function MapView({
                 zoom={9}
                 style={{ height: "100%", width: "100%" }}
             >
+                <PaneInitializer />
+
                 <TileLayer
                     attribution={MAP_LAYERS[mapStyle].attribution}
                     url={MAP_LAYERS[mapStyle].url}

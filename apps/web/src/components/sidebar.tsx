@@ -1,25 +1,40 @@
 import { useEffect, useState } from "react";
 import "../global.css";
 
+import filterIcon from "../assets/filter.png"
+
 import {
     getPlaneRouteInfo,
     type Planes,
     type PlaneRoute
 } from "../lib/planeApi"
 
+interface SidebarProps {
+    planes: Planes[];
+    tokenSnapshot: string | null;
+    selectedPlane: string | null;
+    isFilterOpen: boolean;
+    onSelect: (id: string) => void;
+    onToggleFilter: () => void;
+    onRouteLoaded: (hex: string, routeData: PlaneRoute) => void;
+}
+
 interface SidebarCardProps {
     plane: Planes;
     token: string | null;
     isSelected: boolean;
     onClick: () => void;
+    onRouteLoaded: (hex: string, routeData: PlaneRoute) => void;
 }
 
-function SidebarCard({plane, token, isSelected, onClick}: SidebarCardProps){
+function SidebarCard({plane, token, isSelected, onClick, onRouteLoaded}: SidebarCardProps){
     const [route, setRoute] = useState<PlaneRoute | null>(null);
     const [loading, setLoading] = useState(false);
-
+    
     useEffect(() => {
         const normalizedCallsign = plane.callsign?.toUpperCase().trim();
+
+        if (route || loading) return;
 
         if(!token || !normalizedCallsign || normalizedCallsign == "UNKNOWN") return;
 
@@ -33,10 +48,14 @@ function SidebarCard({plane, token, isSelected, onClick}: SidebarCardProps){
                 const cleanRoute = Array.isArray(rawData) ? rawData[0] : rawData;
 
                 setRoute(cleanRoute);
+
+                if(cleanRoute){
+                    onRouteLoaded(plane.hex, cleanRoute);
+                }
             })
             .catch((err) => console.error("Error fetching card route:", err))
             .finally(() => setLoading(false));
-    }, [plane.hex, plane.callsign, token]);
+    }, [plane.hex, plane.callsign, token, onRouteLoaded, route, loading]);
 
     return (
         <div onClick={onClick} className={`border p-3 cursor-pointer rounded-lg transition-all duration-150 ${isSelected ? "bg-blue-50/80 border-blue-400 shadow-sm" : "bg-white border-gray-200 hover:bg-gray-50"}`}>
@@ -48,14 +67,36 @@ function SidebarCard({plane, token, isSelected, onClick}: SidebarCardProps){
     )
 }
 
-export default function Sidebar({planes, tokenSnapshot, selectedPlane, onSelect}: { planes: Planes[]; tokenSnapshot: string | null; selectedPlane: string | null; onSelect: (id: string) => void; }){
+export default function Sidebar({
+    planes, 
+    tokenSnapshot, 
+    selectedPlane, 
+    isFilterOpen,
+    onSelect, 
+    onToggleFilter,
+    onRouteLoaded
+}: SidebarProps){
     return(
-        <div className="w-sm bg-white p-4 border-r-gray-300 overflow-y-auto flex flex-col">
-            <h2 className="mb-4 font-bold">Plane List</h2>
-            <div className="flex flex-col gap-2">
-                {planes.map((plane) => (
-                    <SidebarCard key={plane.hex} plane={plane} token={tokenSnapshot} isSelected={plane.hex === selectedPlane} onClick={() => onSelect(plane.hex)}/>
-                ))}
+        <div className="flex flex-col bg-white border-r-gray-300 w-sm">
+            <div className="flex flex-row justify-between px-4 pt-4">
+                <h2 className="mb-4 font-bold">Plane List</h2>
+                <button type="button" onClick={onToggleFilter} className={`mb-4 cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
+                    <img src={`${filterIcon}`}/>
+                </button>
+            </div>
+            <div className="bg-white border-r-gray-300 overflow-y-auto flex flex-col">
+                <div className="flex flex-col gap-2">
+                    {planes.map((plane) => (
+                        <SidebarCard 
+                            key={plane.hex} 
+                            plane={plane} 
+                            token={tokenSnapshot} 
+                            isSelected={plane.hex === selectedPlane} 
+                            onClick={() => onSelect(plane.hex)}
+                            onRouteLoaded={onRouteLoaded}
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     )

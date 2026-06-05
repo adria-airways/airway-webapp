@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import { useAuth } from "@clerk/clerk-react";
 import L from "leaflet";
-import { WEATHER_DOT_STYLE } from "../mapStyles";
+
+import weatherIcon from "../assets/weather.png"
 
 import {
   getCurrentWeather,
@@ -12,14 +13,20 @@ import {
 } from "../lib/weatherApi";
 
 const weatherStationIcon = L.divIcon({
-  html: `<div style="
-    width: ${WEATHER_DOT_STYLE.width}px;
-    height: ${WEATHER_DOT_STYLE.height}px;
-    border-radius: ${WEATHER_DOT_STYLE.borderRadius};
-    background: ${WEATHER_DOT_STYLE.background};
-    border: ${WEATHER_DOT_STYLE.border};
-    box-shadow: ${WEATHER_DOT_STYLE.boxShadow};
-  "></div>`,
+  html: 
+  `<div style="
+      background: white;
+      border-radius: 50%;
+      padding: 3px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <img src="${weatherIcon}" style="width: 100%; height: 100%; object-fit: contain;" />
+    </div>`,
   className: "bg-transparent border-none",
   iconSize: [18, 18],
   iconAnchor: [9, 9],
@@ -117,6 +124,7 @@ export default function WeatherStationsLayer({ visible }: { visible: boolean }) 
           <Marker
             key={location.id}
             position={[location.latitude, location.longitude]}
+            pane={"weatherPane"}
             icon={weatherStationIcon}
           >
             <Popup>

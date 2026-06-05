@@ -2,13 +2,19 @@ import "../global.css"
 import { useAuth, UserButton, useUser } from "@clerk/clerk-react"
 import MapView from "./mapView";
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Sidebar from "./sidebar";
+import Filter from "./filter";
 
 import {
   getPlaneLocations,
-  type Planes
+  type Planes,
+  type PlaneRoute
 } from "../lib/planeApi";
-import Sidebar from "./sidebar";
+
+import {
+    type FilterData
+} from "./filter"
 
 export default function Dashboard(){
     const { getToken } = useAuth();
@@ -16,6 +22,12 @@ export default function Dashboard(){
     const [planes, setPlane] = useState<Planes[]>([]);
     const [selectedPlane, setSelectedPlane] = useState<string | null>(null);
     const [tokenSnapshot, setTokenSnapshot] = useState<string | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<FilterData>({
+        callsign: "",
+        airline: ""
+    });
+    const [routeCache, setRouteCache] = useState<Record<string, PlaneRoute>>({});
 
     useEffect(() => {
         let cancelled = false;
@@ -72,6 +84,37 @@ export default function Dashboard(){
         }
     }
 
+    const handleApplyFilters = (filters: FilterData) => {
+        setActiveFilters(filters);
+    }
+
+    const handleResetFilters = () => {
+        setActiveFilters({ callsign: "", airline: ""});
+    }
+
+    const handleRouteLoaded = useCallback((hex: string, routeData: PlaneRoute) => {
+        setRouteCache((prev) => {
+            if(prev[hex]) return prev;
+            return { ...prev, [hex]: routeData };
+        });
+    }, []);
+
+    const filteredPlanes = planes.filter((plane) => {
+        if(activeFilters.callsign){
+            const searchCallsign = activeFilters.callsign.toUpperCase().trim();
+            if(!plane.callsign.toUpperCase().includes(searchCallsign)) return false;
+        }
+
+        if(activeFilters.airline){
+            const cachedRoute = routeCache[plane.hex];
+            if(!cachedRoute || !cachedRoute.airline) return false;
+
+            const searchAirline = activeFilters.airline.toLowerCase().trim();
+            if(!cachedRoute.airline.toLowerCase().includes(searchAirline)) return false;
+        }
+        return true;
+    });
+
     return(
         <div className="flex flex-col h-screen w-screen overflow-hidden bg-[url(/index-bg.jpg)] bg-cover bg-center">
             <header className="w-full flex justify-between items-center bg-black/20 p-5 shadow-md">
@@ -85,9 +128,23 @@ export default function Dashboard(){
             </header>
 
             <div className="flex h-full">
-                <Sidebar planes={planes} tokenSnapshot={tokenSnapshot} selectedPlane={selectedPlane} onSelect={handleSelect} />
+                <Sidebar 
+                    planes={filteredPlanes} 
+                    tokenSnapshot={tokenSnapshot} 
+                    selectedPlane={selectedPlane} 
+                    isFilterOpen={isFilterOpen}
+                    onSelect={handleSelect} 
+                    onToggleFilter = {() => setIsFilterOpen(!isFilterOpen)}
+                    onRouteLoaded={handleRouteLoaded}
+                />
+                <Filter 
+                    isOpen={isFilterOpen} 
+                    onClose={() => setIsFilterOpen(false)}
+                    onApplyFilters={handleApplyFilters}
+                    onResetFilters={handleResetFilters}
+                />
                 <MapView 
-                    planes={planes} 
+                    planes={filteredPlanes} 
                     tokenSnapshot={tokenSnapshot}
                     selectedPlane={selectedPlane}
                 />

@@ -65,6 +65,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
     <Marker
       position={[latitude, longitude]}
       icon={dynamicIcon}
+      pane={"planePane"}
       eventHandlers={{ popupopen: fetchRouteDetails }}
     >
       <Popup>
