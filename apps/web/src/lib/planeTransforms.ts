@@ -13,7 +13,7 @@ export function normalizeLivePlanes(responseData: any): Planes[] {
       longitude: Number(src.longitude),
       originCountry: src.originCountry ?? "UNKNOWN",
       heading: Number(src.heading ?? 0),
-      groundSpeed: Number(src.groudSpeed ?? 0),
+      groundSpeed: Number(src.groundSpeed ?? 0),
     };
   });
 }

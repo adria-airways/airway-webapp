@@ -2,15 +2,22 @@ import "../global.css";
 import { useAuth, UserButton, useUser } from "@clerk/clerk-react";
 import MapView from "./mapView";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Sidebar from "./sidebar";
 import Filter from "./filter";
-import { normalizeLivePlanes } from "../lib/planeTransforms";
+import SnapshotTimeline from "./snapshotTimeline";
+import {
+  normalizeLivePlanes,
+  normalizeSnapshots,
+} from "../lib/planeTransforms";
 
 import {
   getPlaneLocations,
+  getPlanesFromSnapshot,
+  getSnapshots,
   type Planes,
   type PlaneRoute,
+  type Snapshot,
 } from "../lib/planeApi";
 
 import { type FilterData } from "./filter";
@@ -18,6 +25,7 @@ import { type FilterData } from "./filter";
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
+
   const [planes, setPlane] = useState<Planes[]>([]);
   const [selectedPlane, setSelectedPlane] = useState<string | null>(null);
   const [tokenSnapshot, setTokenSnapshot] = useState<string | null>(null);
@@ -27,6 +35,13 @@ export default function Dashboard() {
     airline: "",
   });
   const [routeCache, setRouteCache] = useState<Record<string, PlaneRoute>>({});
+  const [mode, setMode] = useState<"live" | "history">("live");
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [sliderIndex, setSliderIndex] = useState(0);
+
+  const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +49,7 @@ export default function Dashboard() {
     async function fetchPlanes() {
       try {
         const token = await getToken();
-        if (!token || cancelled) return;
+        if (!token || cancelled || mode !== "live") return;
 
         setTokenSnapshot(token);
 
@@ -57,13 +72,82 @@ export default function Dashboard() {
       cancelled = true;
       clearInterval(interval);
     };
+  }, [getToken, mode]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchSnapshots() {
+      try {
+        const token = await getToken();
+        if (!token || cancelled) return;
+
+        setTokenSnapshot(token);
+
+        const responseData = await getSnapshots(token);
+        const sortedSnapshots = [...responseData.data].sort(
+          (a, b) =>
+            new Date(a.snapshotTime).getTime() -
+            new Date(b.snapshotTime).getTime(),
+        );
+
+        setSnapshots(sortedSnapshots);
+
+        if (sortedSnapshots.length > 0) {
+          setSliderIndex(sortedSnapshots.length - 1);
+        }
+      } catch (error) {
+        console.error("Failed loading snapshots:", error);
+      }
+    }
+
+    fetchSnapshots();
+
+    return () => {
+      cancelled = true;
+    };
   }, [getToken]);
 
-  const handleSelect = (hex: string) => {
-    const plane = planes.find((p) => p.hex == hex);
-    if (plane) {
-      setSelectedPlane(plane.hex);
+  useEffect(() => {
+    if (mode !== "history") return;
+
+    const snapshot = snapshots[sliderIndex];
+    if (!snapshot || !tokenSnapshot) return;
+
+    const cachedPlanes = snapshotPlaneCache.current[snapshot.id];
+
+    if (cachedPlanes) {
+      setSnapshotPlanes(cachedPlanes);
+      return;
     }
+
+    const timeout = window.setTimeout(async () => {
+      setSnapshotLoading(true);
+
+      try {
+        const responseData = await getPlanesFromSnapshot(
+          tokenSnapshot,
+          snapshot.id,
+        );
+        const normalized = normalizeSnapshots(responseData);
+
+        snapshotPlaneCache.current[snapshot.id] = normalized;
+        setSnapshotPlanes(normalized);
+      } catch (error) {
+        console.error("Failed loading snapshot planes:", error);
+        setSnapshotPlanes([]);
+      } finally {
+        setSnapshotLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [mode, snapshots, sliderIndex, tokenSnapshot]);
+
+  const handleSelect = (hex: string) => {
+    setSelectedPlane(hex);
   };
 
   const handleApplyFilters = (filters: FilterData) => {
@@ -84,7 +168,25 @@ export default function Dashboard() {
     [],
   );
 
-  const filteredPlanes = planes.filter((plane) => {
+  const handleChangeSnapshotIndex = (index: number) => {
+    setMode("history");
+    setSliderIndex(index);
+    setSelectedPlane(null);
+  };
+
+  const handleReturnLive = () => {
+    setMode("live");
+    setSelectedPlane(null);
+    setSnapshotPlanes([]);
+
+    if (snapshots.length > 0) {
+      setSliderIndex(snapshots.length - 1);
+    }
+  };
+
+  const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+
+  const filteredPlanes = visiblePlanes.filter((plane) => {
     if (activeFilters.callsign) {
       const searchCallsign = activeFilters.callsign.toUpperCase().trim();
       if (!plane.callsign.toUpperCase().includes(searchCallsign)) return false;
@@ -98,6 +200,7 @@ export default function Dashboard() {
       if (!cachedRoute.airline.toLowerCase().includes(searchAirline))
         return false;
     }
+
     return true;
   });
 
@@ -139,6 +242,16 @@ export default function Dashboard() {
           selectedPlane={selectedPlane}
         />
       </div>
+
+      <SnapshotTimeline
+        snapshots={snapshots}
+        sliderIndex={sliderIndex}
+        mode={mode}
+        loading={snapshotLoading}
+        onChangeIndex={handleChangeSnapshotIndex}
+        onReturnLive={handleReturnLive}
+      />
+
       <footer></footer>
     </div>
   );
