@@ -4,7 +4,12 @@ import { db, snapshots, planeSnapshots, planeLive, sql, planeRoutes } from "db";
 
 const API_URL =
   "https://opensky-network.org/api/states/all?lamin=45&lomin=12.8&lamax=47.1&lomax=16.8";
+const OPENSKY_TOKEN_URL =
+  "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
+
 let isFetchingPlanes = false;
+let openskyToken: string | null = null;
+let openskyTokenExpiresAt = 0;
 
 function toInt(value: unknown): number | null {
   if (value == null || value === "") {
@@ -20,6 +25,69 @@ function toFloat(value: unknown): number | null {
   }
 
   return Number(value);
+}
+
+async function getOpenSkyToken() {
+  const clientId = process.env.OPENSKY_CLIENT_ID;
+  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  if (openskyToken && Date.now() < openskyTokenExpiresAt - 60_000) {
+    return openskyToken;
+  }
+
+  const params = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+
+  const { data } = await axios.post(OPENSKY_TOKEN_URL, params, {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+  });
+
+  openskyToken = data.access_token;
+  openskyTokenExpiresAt = Date.now() + (data.expires_in ?? 1800) * 1000;
+
+  return openskyToken;
+}
+
+async function fetchOpenskyStates() {
+  const token = await getOpenSkyToken();
+
+  try {
+    const { data } = await axios.get(API_URL, {
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : undefined,
+    });
+
+    return data;
+  } catch (error: any) {
+    if (error.response?.status !== 401 || !token) {
+      throw error;
+    }
+    openskyToken = null;
+    openskyTokenExpiresAt = 0;
+
+    const refreshedToken = await getOpenSkyToken();
+    const { data } = await axios.get(API_URL, {
+      headers: refreshedToken
+        ? {
+            Authorization: `Bearer ${refreshedToken}`,
+          }
+        : undefined,
+    });
+
+    return data;
+  }
 }
 
 async function cleanSnapshots() {
@@ -57,7 +125,7 @@ async function fetchPlaneData() {
   try {
     console.log(`[planes-cron] Starting at ${new Date().toISOString()}`);
 
-    const { data } = await axios.get(API_URL);
+    const data = await fetchOpenskyStates();
 
     if (!data?.states) {
       console.log("No data from openSky");
@@ -222,7 +290,7 @@ async function fetchPlaneData() {
 }
 
 export function startPlanesCronjob() {
-  cron.schedule("*/5 * * * *", fetchPlaneData);
+  cron.schedule("*/30 * * * * *", fetchPlaneData);
 }
 
 export { fetchPlaneData };
