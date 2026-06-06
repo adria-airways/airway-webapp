@@ -29,6 +29,11 @@ export interface ForecastWeatherResponse {
   forecast: WeatherReading[];
 }
 
+export interface WeatherReadingNearResponse {
+  location: WeatherLocation;
+  reading: WeatherReading | null;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 async function fetchApi<T>(path: string, token: string): Promise<T> {
@@ -59,6 +64,19 @@ export function getCurrentWeather(token: string, locationId: string) {
 export function getCurrentWeatherForecast(token: string, locationId: string) {
   return fetchApi<ForecastWeatherResponse>(
     `/api/weather/app/locations/${locationId}/forecast`,
+    token,
+  );
+}
+
+export function getWeatherReadingNear(
+  token: string,
+  locationId: string,
+  at: string,
+) {
+  const cleanAt = encodeURIComponent(at);
+
+  return fetchApi<WeatherReadingNearResponse>(
+    `/api/weather/app/locations/${locationId}/reading-near?at=${cleanAt}`,
     token,
   );
 }

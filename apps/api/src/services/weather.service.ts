@@ -207,6 +207,7 @@ export async function getWeatherReadingNearTime(
 
   const windowStart = new Date(input.at.getTime() - 3 * 60 * 60 * 1000);
   const windowEnd = new Date(input.at.getTime() + 3 * 60 * 60 * 1000);
+  const targetTime = input.at.toISOString();
 
   const [reading] = await db
     .select()
@@ -218,7 +219,9 @@ export async function getWeatherReadingNearTime(
         lte(readings.validAt, windowEnd),
       ),
     )
-    .orderBy(sql`ABS(EXTRACT(EPOCH FROM (${readings.validAt} - ${input.at})))`)
+    .orderBy(
+      sql`ABS(EXTRACT(EPOCH FROM (${readings.validAt} - ${targetTime}::timestamptz)))`,
+    )
     .limit(1);
 
   return {

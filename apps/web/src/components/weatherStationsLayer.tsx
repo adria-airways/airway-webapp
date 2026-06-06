@@ -9,6 +9,7 @@ import {
   getCurrentWeather,
   getCurrentWeatherForecast,
   getWeatherLocations,
+  getWeatherReadingNear,
   type WeatherLocation,
   type WeatherReading,
 } from "../lib/weatherApi";
@@ -231,8 +232,10 @@ function ForecastWeatherDetails({
 
 export default function WeatherStationsLayer({
   visible,
+  weatherTime,
 }: {
   visible: boolean;
+  weatherTime: string | null;
 }) {
   const { getToken } = useAuth();
   const [locations, setLocations] = useState<WeatherLocation[]>([]);
@@ -248,6 +251,10 @@ export default function WeatherStationsLayer({
   >({});
 
   const handleLoadForecast = async (locationId: string) => {
+    if (weatherTime) {
+      return;
+    }
+
     if (
       forecastByLocation[locationId] ||
       forecastLoadingByLocation[locationId]
@@ -304,11 +311,21 @@ export default function WeatherStationsLayer({
           return;
         }
 
+        setCurrentByLocation({});
         setLocations(nextLocations);
 
         const currentResponses = await Promise.all(
           nextLocations.map(async (location) => {
             try {
+              if (weatherTime) {
+                const response = await getWeatherReadingNear(
+                  token,
+                  location.id,
+                  weatherTime,
+                );
+                return [location.id, response.reading] as const;
+              }
+
               const response = await getCurrentWeather(token, location.id);
               return [location.id, response.current] as const;
             } catch {
@@ -332,7 +349,7 @@ export default function WeatherStationsLayer({
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, [getToken, weatherTime]);
 
   const validLocations = useMemo(
     () =>

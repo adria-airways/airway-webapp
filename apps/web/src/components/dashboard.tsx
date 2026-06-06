@@ -240,6 +240,11 @@ export default function Dashboard() {
           planes={filteredPlanes}
           tokenSnapshot={tokenSnapshot}
           selectedPlane={selectedPlane}
+          weatherTime={
+            mode === "history"
+              ? (snapshots[sliderIndex]?.snapshotTime ?? null)
+              : null
+          }
         />
       </div>
 
