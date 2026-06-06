@@ -3,7 +3,7 @@ import { Marker, Popup } from "react-leaflet";
 import { useAuth } from "@clerk/clerk-react";
 import L from "leaflet";
 
-import weatherIcon from "../assets/weather.png"
+import weatherIcon from "../assets/weather.png";
 
 import {
   getCurrentWeather,
@@ -13,8 +13,7 @@ import {
 } from "../lib/weatherApi";
 
 const weatherStationIcon = L.divIcon({
-  html: 
-  `<div style="
+  html: `<div style="
       background: white;
       border-radius: 50%;
       padding: 3px;
@@ -33,19 +32,114 @@ const weatherStationIcon = L.divIcon({
   popupAnchor: [0, -9],
 });
 
-function formatCurrent(reading?: WeatherReading | null) {
-  if (!reading) return "No current reading";
+function formatValue(value: number | null | undefined, unit: string) {
+  if (value == null) {
+    return "N/A";
+  }
 
-  const parts = [
-    reading.tempC != null ? `Temperature: ${reading.tempC} °C` : null,
-    reading.windKmh != null ? `${reading.windKmh} km/h wind` : null,
-    reading.rhPct != null ? `${reading.rhPct}% humidity` : null,
-  ].filter(Boolean);
-
-  return parts.length > 0 ? parts.join(", ") : "Current reading available";
+  return `${value}${unit}`;
 }
 
-export default function WeatherStationsLayer({ visible }: { visible: boolean }) {
+function formatObservations(value: string | null | undefined) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  return new Date(value).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function CurrentWeatherDetails({
+  reading,
+}: {
+  reading?: WeatherReading | null;
+}) {
+  if (!reading) {
+    return (
+      <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+        No current weather reading available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 min-w-56 space-y-3">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <div className="text-xs font-medium uppercase text-gray-500">
+            Temperature
+          </div>
+          <div className="text-3xl font-semibold text-gray-900">
+            {formatValue(reading.tempC, "°C")}
+          </div>
+        </div>
+
+        {reading.iconCode && (
+          <div className="rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700">
+            {reading.iconCode}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Wind</div>
+          <div className="font-medium text-gray-900">
+            {formatValue(reading.windKmh, " km/h")}
+          </div>
+          {reading.windDir && (
+            <div className="text-xs text-gray-500">{reading.windDir}</div>
+          )}
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Gusts</div>
+          <div className="font-medium text-gray-900">
+            {formatValue(reading.gustKmh, " km/h")}
+          </div>
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Humidity</div>
+          <div className="font-medium text-gray-900">
+            {formatValue(reading.rhPct, "%")}
+          </div>
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Pressure</div>
+          <div className="font-medium text-gray-900">
+            {formatValue(reading.mslHpa, " hPa")}
+          </div>
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Precipitation</div>
+          <div className="font-medium text-gray-900">
+            {formatValue(reading.precipMm, " mm")}
+          </div>
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-2">
+          <div className="text-xs text-gray-500">Observed</div>
+          <div className="font-medium text-gray-900">
+            {formatObservations(reading.validAt)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function WeatherStationsLayer({
+  visible,
+}: {
+  visible: boolean;
+}) {
   const { getToken } = useAuth();
   const [locations, setLocations] = useState<WeatherLocation[]>([]);
   const [currentByLocation, setCurrentByLocation] = useState<
@@ -115,33 +209,40 @@ export default function WeatherStationsLayer({ visible }: { visible: boolean }) 
   }
 
   return (
-  <>
-    {visible &&
-      validLocations.map((location) => {
-        const current = currentByLocation[location.id];
+    <>
+      {visible &&
+        validLocations.map((location) => {
+          const current = currentByLocation[location.id];
 
-        return (
-          <Marker
-            key={location.id}
-            position={[location.latitude, location.longitude]}
-            pane={"weatherPane"}
-            icon={weatherStationIcon}
-          >
-            <Popup>
-              <div>
-                <h3>{location.title}</h3>
-                <p>
-                  {location.country}, {location.id}
-                </p>
-                <p>{formatCurrent(current)}</p>
-                <p>
-                  Location: {location.latitude}, {location.longitude}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-  </>
-);
+          return (
+            <Marker
+              key={location.id}
+              position={[location.latitude, location.longitude]}
+              pane={"weatherPane"}
+              icon={weatherStationIcon}
+            >
+              <Popup>
+                <div>
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">
+                      {location.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {location.country}, {location.id}
+                    </p>
+                  </div>
+
+                  <CurrentWeatherDetails reading={current} />
+
+                  <p className="mt-3 text-xs text-gray-400">
+                    Location: {location.latitude.toFixed(4)},{" "}
+                    {location.longitude.toFixed(4)}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+    </>
+  );
 }
