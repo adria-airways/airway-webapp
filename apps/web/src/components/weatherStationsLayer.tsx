@@ -7,6 +7,7 @@ import weatherIcon from "../assets/weather.png";
 
 import {
   getCurrentWeather,
+  getCurrentWeatherForecast,
   getWeatherLocations,
   type WeatherLocation,
   type WeatherReading,
@@ -48,6 +49,18 @@ function formatObservations(value: string | null | undefined) {
   return new Date(value).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatForecast(value: string | null | undefined) {
+  if (!value) {
+    return "Unknown time";
+  }
+
+  return new Date(value).toLocaleString(undefined, {
+    weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -135,6 +148,72 @@ function CurrentWeatherDetails({
   );
 }
 
+function ForecastWeatherDetails({
+  forecast,
+  loading,
+}: {
+  forecast?: WeatherReading[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="mt-3 rounded-md border border-sky-100 bg-sky-50 p-3 text-sm text-sky-700">
+        Loading forecast...
+      </div>
+    );
+  }
+
+  if (!forecast) {
+    return null;
+  }
+
+  if (forecast.length === 0) {
+    return (
+      <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+        No forecast available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <div className="mb-2 text-xs font-medium uppercase text-gray-500">
+        Forecast
+      </div>
+
+      <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+        {forecast.slice(0, 6).map((reading) => (
+          <div
+            key={reading.id}
+            className="grid grid-cols-[1fr_auto] gap-3 rounded-md bg-gray-50 p-2 text-sm"
+          >
+            <div>
+              <div className="font-medium text-gray-900">
+                {formatForecast(reading.validAt)}
+              </div>
+              <div className="text-xs text-gray-500">
+                {reading.iconCode ?? "Forecast"}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="font-semibold text-gray-900">
+                {formatValue(reading.tempC, "°C")}
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatValue(reading.windKmh, " km/h")} wind
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatValue(reading.precipMm, " mm")} rain
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function WeatherStationsLayer({
   visible,
 }: {
@@ -146,6 +225,52 @@ export default function WeatherStationsLayer({
     Record<string, WeatherReading | null>
   >({});
   const [error, setError] = useState<string | null>(null);
+  const [forecastByLocation, setForecastByLocation] = useState<
+    Record<string, WeatherReading[]>
+  >({});
+  const [forecastLoadingByLocation, setForecastLoadingByLocation] = useState<
+    Record<string, boolean>
+  >({});
+
+  const handleLoadForecast = async (locationId: string) => {
+    if (
+      forecastByLocation[locationId] ||
+      forecastLoadingByLocation[locationId]
+    ) {
+      return;
+    }
+
+    const token = await getToken();
+
+    if (!token) {
+      setError("Missing auth token");
+      return;
+    }
+
+    setForecastLoadingByLocation((prev) => ({
+      ...prev,
+      [locationId]: true,
+    }));
+
+    try {
+      const response = await getCurrentWeatherForecast(token, locationId);
+
+      setForecastByLocation((prev) => ({
+        ...prev,
+        [locationId]: response.forecast,
+      }));
+    } catch {
+      setForecastByLocation((prev) => ({
+        ...prev,
+        [locationId]: [],
+      }));
+    } finally {
+      setForecastLoadingByLocation((prev) => ({
+        ...prev,
+        [locationId]: false,
+      }));
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -218,8 +343,11 @@ export default function WeatherStationsLayer({
             <Marker
               key={location.id}
               position={[location.latitude, location.longitude]}
-              pane={"weatherPane"}
+              pane="weatherPane"
               icon={weatherStationIcon}
+              eventHandlers={{
+                popupopen: () => handleLoadForecast(location.id),
+              }}
             >
               <Popup>
                 <div>
@@ -233,6 +361,10 @@ export default function WeatherStationsLayer({
                   </div>
 
                   <CurrentWeatherDetails reading={current} />
+                  <ForecastWeatherDetails
+                    forecast={forecastByLocation[location.id]}
+                    loading={forecastLoadingByLocation[location.id] ?? false}
+                  />
 
                   <p className="mt-3 text-xs text-gray-400">
                     Location: {location.latitude.toFixed(4)},{" "}

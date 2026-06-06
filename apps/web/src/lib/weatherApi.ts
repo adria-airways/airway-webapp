@@ -24,6 +24,11 @@ export interface WeatherReading {
   fetchedAt: string;
 }
 
+export interface ForecastWeatherResponse {
+  location: WeatherLocation;
+  forecast: WeatherReading[];
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 async function fetchApi<T>(path: string, token: string): Promise<T> {
@@ -49,4 +54,11 @@ export function getCurrentWeather(token: string, locationId: string) {
     location: WeatherLocation;
     current: WeatherReading | null;
   }>(`/api/weather/app/locations/${locationId}/current`, token);
+}
+
+export function getCurrentWeatherForecast(token: string, locationId: string) {
+  return fetchApi<ForecastWeatherResponse>(
+    `/api/weather/app/locations/${locationId}/forecast`,
+    token,
+  );
 }
