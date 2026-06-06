@@ -56,10 +56,12 @@ export default function MapView({
   planes,
   tokenSnapshot,
   selectedPlane,
+  weatherTime,
 }: {
   planes: Planes[];
   tokenSnapshot: string | null;
   selectedPlane: string | null;
+  weatherTime: string | null;
 }) {
   const [showWeatherStations, setShowWeatherStations] = useState(true);
   const [showPlanes, setShowPlanes] = useState(true);
@@ -79,7 +81,10 @@ export default function MapView({
           url={MAP_LAYERS[mapStyle].url}
         />
 
-        <WeatherStationsLayer visible={showWeatherStations} />
+        <WeatherStationsLayer
+          visible={showWeatherStations}
+          weatherTime={weatherTime}
+        />
         <PlaneMap
           visible={showPlanes}
           planes={planes}

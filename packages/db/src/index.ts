@@ -8,4 +8,4 @@ const client = postgres(process.env.DATABASE_URL!, {
 
 export const db = drizzle({ client });
 export * from "./schema.js";
-export { sql, eq, and, lte, gte, desc, gt, asc, lt} from "drizzle-orm";
+export { sql, eq, and, lte, gte, desc, gt, asc, lt, or } from "drizzle-orm";
