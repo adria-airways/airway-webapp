@@ -12,8 +12,12 @@ app.listen(port, () => {
   console.log(`Running on http://localhost:${port}`);
 
   startPlanesCronjob();
-  fetchPlaneData();
+  fetchPlaneData().catch((error) => {
+    console.error("[planes-cron] initial fetch failed:", error);
+  });
 
   startCronjob();
-  fetchWeatherData();
+  fetchWeatherData().catch((error) => {
+    console.error("[weather-cron] initial fetch failed:", error);
+  });
 });

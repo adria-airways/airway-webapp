@@ -6,6 +6,7 @@ const API_URL =
   "https://opensky-network.org/api/states/all?lamin=45&lomin=12.8&lamax=47.1&lomax=16.8";
 const OPENSKY_TOKEN_URL =
   "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
+const HTTP_TIMEOUT_MS = 10_000;
 
 let isFetchingPlanes = false;
 let openskyToken: string | null = null;
@@ -46,6 +47,7 @@ async function getOpenSkyToken() {
   });
 
   const { data } = await axios.post(OPENSKY_TOKEN_URL, params, {
+    timeout: HTTP_TIMEOUT_MS,
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
@@ -62,6 +64,7 @@ async function fetchOpenskyStates() {
 
   try {
     const { data } = await axios.get(API_URL, {
+      timeout: HTTP_TIMEOUT_MS,
       headers: token
         ? {
             Authorization: `Bearer ${token}`,
@@ -79,6 +82,7 @@ async function fetchOpenskyStates() {
 
     const refreshedToken = await getOpenSkyToken();
     const { data } = await axios.get(API_URL, {
+      timeout: HTTP_TIMEOUT_MS,
       headers: refreshedToken
         ? {
             Authorization: `Bearer ${refreshedToken}`,
@@ -106,6 +110,9 @@ async function fetchRoute(callsign: string) {
   try {
     const res = await axios.get(
       `https://api.adsbdb.com/v0/callsign/${callsign}`,
+      {
+        timeout: HTTP_TIMEOUT_MS,
+      },
     );
 
     return res.data;
@@ -230,36 +237,30 @@ async function fetchPlaneData() {
       routeMap.set(missingRoute.callsign, res.response.flightroute);
     }
 
-    const rowsWithRouteData = rows.map((r: any) => {
-      if (!r.callsign) {
-        return r;
-      }
+    const rowsWithRouteData = rows
+      .filter((r: any) => r.callsign)
+      .map((r: any) => {
+        const route = routeMap.get(r.callsign);
 
-      const route = routeMap.get(r.callsign);
+        return {
+          hex: r.hex,
+          callsign: r.callsign,
 
-      if (!route) {
-        return r;
-      }
+          airline: route?.airline?.name ?? null,
 
-      return {
-        hex: r.hex,
-        callsign: r.callsign,
+          flyingFromCountry: route?.origin?.country_name ?? null,
+          flyingFromLatitude: route?.origin?.latitude ?? null,
+          flyingFromLongitude: route?.origin?.longitude ?? null,
+          flyingFromCity: route?.origin?.municipality ?? null,
+          flyingFromAirport: route?.origin?.name ?? null,
 
-        airline: route?.airline?.name ?? null,
-
-        flyingFromCountry: route?.origin?.country_name ?? null,
-        flyingFromLatitude: route?.origin?.latitude ?? null,
-        flyingFromLongitude: route?.origin?.longitude ?? null,
-        flyingFromCity: route?.origin?.municipality ?? null,
-        flyingFromAirport: route?.origin?.name ?? null,
-
-        flyingToCountry: route?.destination?.country_name ?? null,
-        flyingToLatitude: route?.destination?.latitude ?? null,
-        flyingToLongitude: route?.destination?.longitude ?? null,
-        flyingToCity: route?.destination?.municipality ?? null,
-        flyingToAirport: route?.destination?.name ?? null,
-      };
-    });
+          flyingToCountry: route?.destination?.country_name ?? null,
+          flyingToLatitude: route?.destination?.latitude ?? null,
+          flyingToLongitude: route?.destination?.longitude ?? null,
+          flyingToCity: route?.destination?.municipality ?? null,
+          flyingToAirport: route?.destination?.name ?? null,
+        };
+      });
 
     await db.transaction(async (t) => {
       await t.delete(planeLive);
@@ -272,10 +273,12 @@ async function fetchPlaneData() {
     }));
 
     await db.insert(planeSnapshots).values(historyRows);
-    await db
-      .insert(planeRoutes)
-      .values(rowsWithRouteData)
-      .onConflictDoNothing();
+    if (rowsWithRouteData.length > 0) {
+      await db
+        .insert(planeRoutes)
+        .values(rowsWithRouteData)
+        .onConflictDoNothing();
+    }
 
     await cleanSnapshots();
     await cleanRoutes();
@@ -290,7 +293,13 @@ async function fetchPlaneData() {
 }
 
 export function startPlanesCronjob() {
-  cron.schedule("*/30 * * * * *", fetchPlaneData);
+  cron.schedule("*/30 * * * * *", runPlaneCron);
+}
+
+function runPlaneCron() {
+  fetchPlaneData().catch((error) => {
+    console.error("[planes-cron] failed:", error);
+  });
 }
 
 export { fetchPlaneData };
