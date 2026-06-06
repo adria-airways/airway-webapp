@@ -19,6 +19,37 @@ export interface PlaneRoute {
   flyingToCountry: string;
 }
 
+export interface Snapshot {
+  id: number;
+  snapshotTime: string;
+  aircraftCount: number;
+}
+
+export interface PlaneSnapshot {
+  id: number;
+  snapshotId: number;
+  snapshotTime: string;
+  hex: string;
+  callsign: string | null;
+  originCountry: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  baroAltitude: number | null;
+  onGround: boolean;
+  groundSpeed: number | null;
+  heading: number | null;
+  verticalRate: number | null;
+  spi: boolean;
+}
+
+export interface ApiListResponse<T> {
+  data: T[];
+}
+
+export interface LatestSnapshotResponse {
+  latestSnapshot: Snapshot | null;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 async function fetchApi<T>(path: string, token: string): Promise<T> {
@@ -45,12 +76,37 @@ export function getPlaneLocations(token: string) {
   return fetchApi<any>("/api/planes/app/live", token);
 }
 
-export function getPlaneRouteInfo(token: string, hex: string, callsign: string) {
+export function getSnapshots(token: string) {
+  return fetchApi<ApiListResponse<Snapshot>>(
+    "/api/planes/app/snapshots",
+    token,
+  );
+}
+
+export function getLatestSnapshot(token: string) {
+  return fetchApi<LatestSnapshotResponse>(
+    "/api/planes/app/snapshots/latest",
+    token,
+  );
+}
+
+export function getPlanesFromSnapshot(token: string, snapshotId: number) {
+  return fetchApi<ApiListResponse<PlaneSnapshot>>(
+    `/api/planes/app/plane-snapshots/${snapshotId}`,
+    token,
+  );
+}
+
+export function getPlaneRouteInfo(
+  token: string,
+  hex: string,
+  callsign: string,
+) {
   const cleanCallsign = encodeURIComponent(callsign.trim());
   const cleanHex = encodeURIComponent(hex.trim());
-  
+
   return fetchApi<any>(
     `/api/planes/app/routes/info?hex=${cleanHex}&callsign=${cleanCallsign}`,
-    token
+    token,
   );
 }
