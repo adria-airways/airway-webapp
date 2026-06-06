@@ -13,25 +13,40 @@ import {
   type WeatherReading,
 } from "../lib/weatherApi";
 
-const weatherStationIcon = L.divIcon({
-  html: `<div style="
-      background: white;
-      border-radius: 50%;
-      padding: 3px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">
-      <img src="${weatherIcon}" style="width: 100%; height: 100%; object-fit: contain;" />
-    </div>`,
-  className: "bg-transparent border-none",
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-  popupAnchor: [0, -9],
-});
+function createWeatherStationIcon(reading?: WeatherReading | null) {
+  const temperature = reading?.tempC != null ? `${reading.tempC}°C` : "";
+
+  return L.divIcon({
+    html: `<div style="
+        min-width: ${temperature ? "48px" : "24px"};
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border-radius: 9999px;
+        border: 1px solid rgba(14, 165, 233, 0.35);
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+        padding: 2px 6px;
+        color: #111827;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      ">
+        <img src="${weatherIcon}" style="width: 16px; height: 16px; object-fit: contain;" />
+        ${
+          temperature
+            ? `<span style="line-height: 1;">${temperature}</span>`
+            : ""
+        }
+      </div>`,
+    className: "bg-transparent border-none",
+    iconSize: temperature ? [52, 24] : [24, 24],
+    iconAnchor: temperature ? [26, 12] : [12, 12],
+    popupAnchor: [0, -12],
+  });
+}
 
 function formatValue(value: number | null | undefined, unit: string) {
   if (value == null) {
@@ -344,7 +359,7 @@ export default function WeatherStationsLayer({
               key={location.id}
               position={[location.latitude, location.longitude]}
               pane="weatherPane"
-              icon={weatherStationIcon}
+              icon={createWeatherStationIcon(current)}
               eventHandlers={{
                 popupopen: () => handleLoadForecast(location.id),
               }}
