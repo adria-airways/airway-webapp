@@ -4,6 +4,10 @@ export const locationParameterSchema = z.object({
   id: z.string().min(1).max(16),
 });
 
+export const weatherReadingNearQuerySchema = z.object({
+  at: z.coerce.date(),
+});
+
 export const createLocationSchema = z.object({
   id: z.string().min(1).max(16),
   title: z.string().min(1).max(64),
@@ -65,3 +69,7 @@ export type BulkReadingsInput = z.infer<typeof bulkReadingsSchema>;
 export type ReadingIdParameters = z.infer<typeof readingIdParameterSchema>;
 export type CreateReadingInput = z.infer<typeof createReadingSchema>;
 export type UpdateReadingInput = z.infer<typeof updateReadingSchema>;
+
+export type weatherReadingNearQuerySchema = z.infer<
+  typeof weatherReadingNearQuerySchema
+>;

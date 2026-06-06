@@ -10,6 +10,7 @@ import {
   updateLocationSchema,
   updateReadingSchema,
   bulkReadingsSchema,
+  weatherReadingNearQuerySchema,
 } from "../validation/weather.validation.js";
 
 export async function listLocations(
@@ -245,6 +246,32 @@ export async function getCurrentWeatherForLocation(
   try {
     const params = locationParameterSchema.parse(req.params);
     const result = await weatherService.getCurrentWeatherForLocation(params.id);
+
+    if (!result) {
+      return res.status(404).json({
+        message: "Weather station location not found!",
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getWeatherReadingNearTime(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const params = locationParameterSchema.parse(req.params);
+    const query = weatherReadingNearQuerySchema.parse(req.query);
+
+    const result = await weatherService.getWeatherReadingNearTime(
+      params.id,
+      query,
+    );
 
     if (!result) {
       return res.status(404).json({

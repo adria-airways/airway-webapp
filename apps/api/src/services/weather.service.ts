@@ -1,4 +1,16 @@
-import { db, eq, locations, and, gte, lte, readings, sql, desc } from "db";
+import {
+  db,
+  eq,
+  locations,
+  and,
+  gte,
+  lte,
+  readings,
+  sql,
+  desc,
+  asc,
+  or,
+} from "db";
 
 import {
   type CreateLocationInput,
@@ -7,6 +19,7 @@ import {
   type UpdateLocationInput,
   type UpdateReadingInput,
   type BulkReadingsInput,
+  type weatherReadingNearQuerySchema,
 } from "../validation/weather.validation.js";
 
 export async function listLocations() {
@@ -180,6 +193,40 @@ export async function getCurrentWeatherForLocation(locationId: string) {
   return {
     location,
     current: current ?? null,
+  };
+}
+
+export async function getWeatherReadingNearTime(
+  locationId: string,
+  input: weatherReadingNearQuerySchema,
+) {
+  const location = await getLocationWithId(locationId);
+  if (!location) {
+    return null;
+  }
+
+  const windowStart = new Date(input.at.getTime() - 3 * 60 * 60 * 1000);
+  const windowEnd = new Date(input.at.getTime() + 3 * 60 * 60 * 1000);
+  const targetTime = input.at.toISOString();
+
+  const [reading] = await db
+    .select()
+    .from(readings)
+    .where(
+      and(
+        eq(readings.locationId, locationId),
+        gte(readings.validAt, windowStart),
+        lte(readings.validAt, windowEnd),
+      ),
+    )
+    .orderBy(
+      sql`ABS(EXTRACT(EPOCH FROM (${readings.validAt} - ${targetTime}::timestamptz)))`,
+    )
+    .limit(1);
+
+  return {
+    location,
+    reading: reading ?? null,
   };
 }
 

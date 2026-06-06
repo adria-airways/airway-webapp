@@ -555,6 +555,45 @@ router.get(
 
 /**
  * @openapi
+ * /weather/app/locations/{id}/reading-near:
+ *   get:
+ *     tags:
+ *       - Weather App
+ *     summary: Get weather reading closest to a specific time for a location
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *           maxLength: 16
+ *       - name: at
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: Closest weather reading returned.
+ *       400:
+ *         description: Invalid path or query parameter.
+ *       401:
+ *         description: Unauthorized.
+ *       404:
+ *         description: Weather location not found.
+ */
+router.get(
+  "/app/locations/:id/reading-near",
+  requireUser,
+  weatherController.getWeatherReadingNearTime,
+);
+
+/**
+ * @openapi
  * /weather/app/locations/{id}/forecast:
  *   get:
  *     tags:
