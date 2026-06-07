@@ -2,8 +2,18 @@ import { Request, Response } from "express";
 import * as planesService from "../services/planes.service.js";
 import { bulkPlaneLiveSchema, bulkPlaneRouteSchema, bulkPlaneSnapshotSchema, createGeoRegionSchema, createPlaneLiveSchema, createPlaneRouteSchema, createPlaneSnapshotSchema, createSnapshotSchema, flightHistoryRouteInfoQuerySchema, nearbyAircraftQuerySchema, planeHexParameterSchema, planeIdParameterSchema, updatePlaneLiveSchema, updatePlaneRouteSchema, updatePlaneSnapshotSchema, updateRegionSchema, updateSnapshotSchema } from "../validation/planes.validation.js";
 
+const LIVE_PLANES_TTL_MS = 15_000;
+let livePlanesCache: Awaited<ReturnType<typeof planesService.getLivePlanes>> | null = null;
+let livePlanesCachedAt = 0;
+
 export async function getLivePlanes(_req: Request, res: Response) {
+  if (livePlanesCache && Date.now() - livePlanesCachedAt < LIVE_PLANES_TTL_MS) {
+    return res.json({ data: livePlanesCache });
+  }
+
   const data = await planesService.getLivePlanes();
+  livePlanesCache = data;
+  livePlanesCachedAt = Date.now();
 
   res.json({ data });
 }
