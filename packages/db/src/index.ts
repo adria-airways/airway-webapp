@@ -9,8 +9,8 @@ const client = postgres(process.env.DATABASE_URL!, {
   idle_timeout: 20,
   max_lifetime: 60 * 10,
   connection: {
-    options:
-      "-c statement_timeout=10000 -c idle_in_transaction_session_timeout=10000",
+    statement_timeout: '10000',
+    idle_in_transaction_session_timeout: '10000',
   },
 });
 

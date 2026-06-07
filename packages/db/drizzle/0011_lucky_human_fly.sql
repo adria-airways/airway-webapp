@@ -1,0 +1,1 @@
+CREATE INDEX "idx_readings_location_time" ON "readings" USING btree ("location_id","valid_at");

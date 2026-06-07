@@ -205,24 +205,29 @@ export async function getWeatherReadingNearTime(
     return null;
   }
 
-  const windowStart = new Date(input.at.getTime() - 3 * 60 * 60 * 1000);
-  const windowEnd = new Date(input.at.getTime() + 3 * 60 * 60 * 1000);
-  const targetTime = input.at.toISOString();
-
-  const [reading] = await db
+  const [before] = await db
     .select()
     .from(readings)
-    .where(
-      and(
-        eq(readings.locationId, locationId),
-        gte(readings.validAt, windowStart),
-        lte(readings.validAt, windowEnd),
-      ),
-    )
-    .orderBy(
-      sql`ABS(EXTRACT(EPOCH FROM (${readings.validAt} - ${targetTime}::timestamptz)))`,
-    )
+    .where(and(eq(readings.locationId, locationId), lte(readings.validAt, input.at)))
+    .orderBy(desc(readings.validAt))
     .limit(1);
+
+  const [after] = await db
+    .select()
+    .from(readings)
+    .where(and(eq(readings.locationId, locationId), gte(readings.validAt, input.at)))
+    .orderBy(asc(readings.validAt))
+    .limit(1);
+
+  let reading: typeof before | undefined;
+
+  if (before && after) {
+    const beforeDiff = Math.abs(before.validAt.getTime() - input.at.getTime());
+    const afterDiff = Math.abs(after.validAt.getTime() - input.at.getTime());
+    reading = beforeDiff <= afterDiff ? before : after;
+  } else {
+    reading = before ?? after;
+  }
 
   return {
     location,

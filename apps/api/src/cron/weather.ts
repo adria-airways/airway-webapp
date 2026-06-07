@@ -3,6 +3,31 @@ import axios from "axios";
 import { db, locations, readings, sql } from "db";
 
 const API_URL = "https://vreme.arso.gov.si/api/1.0/location/";
+const HTTP_TIMEOUT_MS = 10_000;
+const DB_TIMEOUT_MS = 15_000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs = DB_TIMEOUT_MS,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`[weather-cron] ${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
 
 function toInt(value: unknown): number | null {
   if (value == null || value === "") {
@@ -103,6 +128,7 @@ async function cleanReadings() {
 async function fetchLocationData(locationId: string, title: string) {
   const { data } = await axios.get(API_URL, {
     params: { location: title },
+    timeout: HTTP_TIMEOUT_MS,
   });
 
   const rows = parseReadings(data, locationId);
@@ -111,31 +137,34 @@ async function fetchLocationData(locationId: string, title: string) {
     return;
   }
 
-  await db
-    .insert(readings)
-    .values(rows)
-    .onConflictDoUpdate({
-      target: [readings.locationId, readings.resolution, readings.validAt],
-      set: {
-        tempC: sql`excluded.temp_c`,
-        tempMinC: sql`excluded.temp_min_c`,
-        tempMaxC: sql`excluded.temp_max_c`,
-        rhPct: sql`excluded.rh_pct`,
-        mslHpa: sql`excluded.msl_hpa`,
-        windKmh: sql`excluded.wind_kmh`,
-        gustKmh: sql`excluded.gust_kmh`,
-        windDir: sql`excluded.wind_dir`,
-        precipMm: sql`excluded.precip_mm`,
-        iconCode: sql`excluded.icon_code`,
-        fetchedAt: sql`now()`,
-      },
-    });
+  await withTimeout(
+    db
+      .insert(readings)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [readings.locationId, readings.resolution, readings.validAt],
+        set: {
+          tempC: sql`excluded.temp_c`,
+          tempMinC: sql`excluded.temp_min_c`,
+          tempMaxC: sql`excluded.temp_max_c`,
+          rhPct: sql`excluded.rh_pct`,
+          mslHpa: sql`excluded.msl_hpa`,
+          windKmh: sql`excluded.wind_kmh`,
+          gustKmh: sql`excluded.gust_kmh`,
+          windDir: sql`excluded.wind_dir`,
+          precipMm: sql`excluded.precip_mm`,
+          iconCode: sql`excluded.icon_code`,
+          fetchedAt: sql`now()`,
+        },
+      }),
+    "readings insert",
+  );
 }
 
 async function fetchWeatherData() {
   console.log(`[weather-cron] Starting at ${new Date().toISOString()}`);
 
-  const locs = await db.select().from(locations);
+  const locs = await withTimeout(db.select().from(locations), "locations select");
   let success = 0;
   let failed = 0;
 
@@ -149,7 +178,7 @@ async function fetchWeatherData() {
     }
   }
 
-  await cleanReadings();
+  await withTimeout(cleanReadings(), "clean readings");
   console.log(`[weather-cron] ${success} success, ${failed} failed`);
 }
 
