@@ -39,5 +39,6 @@ export const readings = pgTable(
   (t) => [
     unique("unique_readings").on(t.locationId, t.resolution, t.validAt),
     index("idx_fetch").on(t.fetchedAt),
+    index("idx_readings_location_time").on(t.locationId, t.validAt),
   ],
 );
