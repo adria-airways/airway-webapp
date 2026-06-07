@@ -7,7 +7,7 @@ const HTTP_TIMEOUT_MS = 10_000;
 const DB_TIMEOUT_MS = 15_000;
 
 async function withTimeout<T>(
-  promise: Promise<T>,
+  promise: PromiseLike<T>,
   label: string,
   timeoutMs = DB_TIMEOUT_MS,
 ): Promise<T> {
@@ -164,7 +164,7 @@ async function fetchLocationData(locationId: string, title: string) {
 async function fetchWeatherData() {
   console.log(`[weather-cron] Starting at ${new Date().toISOString()}`);
 
-  const locs = await withTimeout(db.select().from(locations), "locations select");
+  const locs = await db.select().from(locations);
   let success = 0;
   let failed = 0;
 
