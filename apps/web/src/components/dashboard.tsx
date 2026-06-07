@@ -86,7 +86,7 @@ export default function Dashboard() {
     }
 
     fetchPlanes();
-    const interval = setInterval(fetchPlanes, 10000);
+    const interval = setInterval(fetchPlanes, 30000);
 
     return () => {
       cancelled = true;
