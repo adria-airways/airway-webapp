@@ -281,13 +281,10 @@ async function fetchPlaneData() {
       return;
     }
 
-    await withTimeout(
-      db.transaction(async (t) => {
-        await t.delete(planeLive);
-        await t.insert(planeLive).values(rows).onConflictDoNothing();
-      }),
-      "live plane update",
-    );
+    await db.transaction(async (t) => {
+      await t.delete(planeLive);
+      await t.insert(planeLive).values(rows).onConflictDoNothing();
+    });
 
     let failed = 0;
     let missingRouteCount = 0;
@@ -298,13 +295,10 @@ async function fetchPlaneData() {
       failed = routeRows.failed;
 
       if (routeRows.rowsWithRouteData.length > 0) {
-        await withTimeout(
-          db
-            .insert(planeRoutes)
-            .values(routeRows.rowsWithRouteData)
-            .onConflictDoNothing(),
-          "route insert",
-        );
+        await db
+          .insert(planeRoutes)
+          .values(routeRows.rowsWithRouteData)
+          .onConflictDoNothing();
 
         for (const row of routeRows.rowsWithRouteData) {
           knownRouteKeys.add(`${row.hex}:${row.callsign}`);
@@ -319,16 +313,13 @@ async function fetchPlaneData() {
 
     if (shouldStoreHistory) {
       try {
-        const snapshotRows = await withTimeout(
-          db
-            .insert(snapshots)
-            .values({
-              snapshotTime: new Date(time * 1000),
-              aircraftCount: states.length,
-            })
-            .returning(),
-          "snapshot insert",
-        ) as Array<{ id: number }>;
+        const snapshotRows = await db
+          .insert(snapshots)
+          .values({
+            snapshotTime: new Date(time * 1000),
+            aircraftCount: states.length,
+          })
+          .returning() as Array<{ id: number }>;
         const [snapshot] = snapshotRows;
 
         const historyRows = rows.map((r: any) => ({
@@ -336,13 +327,10 @@ async function fetchPlaneData() {
           snapshotId: snapshot.id,
         }));
 
-        await withTimeout(
-          db.insert(planeSnapshots).values(historyRows),
-          "plane snapshot insert",
-        );
+        await db.insert(planeSnapshots).values(historyRows);
 
-        await withTimeout(cleanSnapshots(), "snapshot cleanup");
-        await withTimeout(cleanRoutes(), "route cleanup");
+        await cleanSnapshots();
+        await cleanRoutes();
         lastHistorySnapshotAt = Date.now();
       } catch (error) {
         console.error("[planes-cron] history write failed:", error);
