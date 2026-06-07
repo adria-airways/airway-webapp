@@ -15,6 +15,7 @@ let isFetchingPlanes = false;
 let openskyToken: string | null = null;
 let openskyTokenExpiresAt = 0;
 let lastHistorySnapshotAt = 0;
+const knownRouteKeys = new Set<string>();
 
 function toInt(value: unknown): number | null {
   if (value == null || value === "") {
@@ -148,6 +149,79 @@ async function fetchRoute(callsign: string) {
   }
 }
 
+async function buildRouteRows(rows: any[]) {
+  type PlaneIdentifier = {
+    hex: string;
+    callsign: string;
+  };
+
+  const planes: PlaneIdentifier[] = [
+    ...new Map<string, PlaneIdentifier>(
+      rows
+        .filter((r: any) => r.callsign)
+        .map((r: any) => [
+          `${r.hex}:${r.callsign}`,
+          {
+            hex: r.hex,
+            callsign: r.callsign!,
+          },
+        ]),
+    ).values(),
+  ];
+
+  const missingRoutes = planes.filter(
+    (p) => !knownRouteKeys.has(`${p.hex}:${p.callsign}`),
+  );
+
+  let failed = 0;
+  const routeMap = new Map<string, any>();
+
+  await withTimeout(
+    (async () => {
+      for (const missingRoute of missingRoutes) {
+        const res = await fetchRoute(missingRoute.callsign);
+
+        if (!res || !res.response?.flightroute) {
+          failed++;
+          continue;
+        }
+
+        routeMap.set(missingRoute.callsign, res.response.flightroute);
+      }
+    })(),
+    "ADSBDB route enrichment",
+  );
+
+  const rowsWithRouteData = missingRoutes.map((r) => {
+    const route = routeMap.get(r.callsign);
+
+    return {
+      hex: r.hex,
+      callsign: r.callsign,
+
+      airline: route?.airline?.name ?? null,
+
+      flyingFromCountry: route?.origin?.country_name ?? null,
+      flyingFromLatitude: route?.origin?.latitude ?? null,
+      flyingFromLongitude: route?.origin?.longitude ?? null,
+      flyingFromCity: route?.origin?.municipality ?? null,
+      flyingFromAirport: route?.origin?.name ?? null,
+
+      flyingToCountry: route?.destination?.country_name ?? null,
+      flyingToLatitude: route?.destination?.latitude ?? null,
+      flyingToLongitude: route?.destination?.longitude ?? null,
+      flyingToCity: route?.destination?.municipality ?? null,
+      flyingToAirport: route?.destination?.name ?? null,
+    };
+  });
+
+  return {
+    failed,
+    missingRouteCount: missingRoutes.length,
+    rowsWithRouteData,
+  };
+}
+
 async function fetchPlaneData() {
   if (isFetchingPlanes) {
     console.log("[planes-cron] previous run still active, skipping");
@@ -207,88 +281,6 @@ async function fetchPlaneData() {
       return;
     }
 
-    type PlaneIdentifier = {
-      hex: string;
-      callsign: string;
-    };
-
-    const planes: PlaneIdentifier[] = [
-      ...new Map<string, PlaneIdentifier>(
-        rows
-          .filter((r: any) => r.callsign)
-          .map((r: any) => [
-            `${r.hex}:${r.callsign}`,
-            {
-              hex: r.hex,
-              callsign: r.callsign!,
-            },
-          ]),
-      ).values(),
-    ];
-
-    const existingRoutes = await withTimeout(
-      db
-        .select({
-          hex: planeRoutes.hex,
-          callsign: planeRoutes.callsign,
-        })
-        .from(planeRoutes),
-      "existing route lookup",
-    ) as Array<{ hex: string; callsign: string }>;
-
-    const existingSet = new Set(
-      existingRoutes.map((r) => `${r.hex}:${r.callsign}`),
-    );
-
-    const missingRoutes = planes.filter(
-      (p) => !existingSet.has(`${p.hex}:${p.callsign}`),
-    );
-
-    let failed = 0;
-
-    const routeMap = new Map<string, any>();
-
-    await withTimeout(
-      (async () => {
-        for (const missingRoute of missingRoutes) {
-          const res = await fetchRoute(missingRoute.callsign);
-
-          if (!res || !res.response?.flightroute) {
-            failed++;
-            continue;
-          }
-
-          routeMap.set(missingRoute.callsign, res.response.flightroute);
-        }
-      })(),
-      "ADSBDB route enrichment",
-    );
-
-    const rowsWithRouteData = rows
-      .filter((r: any) => r.callsign)
-      .map((r: any) => {
-        const route = routeMap.get(r.callsign);
-
-        return {
-          hex: r.hex,
-          callsign: r.callsign,
-
-          airline: route?.airline?.name ?? null,
-
-          flyingFromCountry: route?.origin?.country_name ?? null,
-          flyingFromLatitude: route?.origin?.latitude ?? null,
-          flyingFromLongitude: route?.origin?.longitude ?? null,
-          flyingFromCity: route?.origin?.municipality ?? null,
-          flyingFromAirport: route?.origin?.name ?? null,
-
-          flyingToCountry: route?.destination?.country_name ?? null,
-          flyingToLatitude: route?.destination?.latitude ?? null,
-          flyingToLongitude: route?.destination?.longitude ?? null,
-          flyingToCity: route?.destination?.municipality ?? null,
-          flyingToAirport: route?.destination?.name ?? null,
-        };
-      });
-
     await withTimeout(
       db.transaction(async (t) => {
         await t.delete(planeLive);
@@ -297,49 +289,68 @@ async function fetchPlaneData() {
       "live plane update",
     );
 
-    if (rowsWithRouteData.length > 0) {
-      await withTimeout(
-        db
-          .insert(planeRoutes)
-          .values(rowsWithRouteData)
-          .onConflictDoNothing(),
-        "route insert",
-      );
+    let failed = 0;
+    let missingRouteCount = 0;
+
+    try {
+      const routeRows = await buildRouteRows(rows);
+      missingRouteCount = routeRows.missingRouteCount;
+      failed = routeRows.failed;
+
+      if (routeRows.rowsWithRouteData.length > 0) {
+        await withTimeout(
+          db
+            .insert(planeRoutes)
+            .values(routeRows.rowsWithRouteData)
+            .onConflictDoNothing(),
+          "route insert",
+        );
+
+        for (const row of routeRows.rowsWithRouteData) {
+          knownRouteKeys.add(`${row.hex}:${row.callsign}`);
+        }
+      }
+    } catch (error) {
+      console.error("[planes-cron] route enrichment failed:", error);
     }
 
     const shouldStoreHistory =
       Date.now() - lastHistorySnapshotAt >= HISTORY_SNAPSHOT_INTERVAL_MS;
 
     if (shouldStoreHistory) {
-      const snapshotRows = await withTimeout(
-        db
-          .insert(snapshots)
-          .values({
-            snapshotTime: new Date(time * 1000),
-            aircraftCount: states.length,
-          })
-          .returning(),
-        "snapshot insert",
-      ) as Array<{ id: number }>;
-      const [snapshot] = snapshotRows;
+      try {
+        const snapshotRows = await withTimeout(
+          db
+            .insert(snapshots)
+            .values({
+              snapshotTime: new Date(time * 1000),
+              aircraftCount: states.length,
+            })
+            .returning(),
+          "snapshot insert",
+        ) as Array<{ id: number }>;
+        const [snapshot] = snapshotRows;
 
-      const historyRows = rows.map((r: any) => ({
-        ...r,
-        snapshotId: snapshot.id,
-      }));
+        const historyRows = rows.map((r: any) => ({
+          ...r,
+          snapshotId: snapshot.id,
+        }));
 
-      await withTimeout(
-        db.insert(planeSnapshots).values(historyRows),
-        "plane snapshot insert",
-      );
+        await withTimeout(
+          db.insert(planeSnapshots).values(historyRows),
+          "plane snapshot insert",
+        );
 
-      await withTimeout(cleanSnapshots(), "snapshot cleanup");
-      await withTimeout(cleanRoutes(), "route cleanup");
-      lastHistorySnapshotAt = Date.now();
+        await withTimeout(cleanSnapshots(), "snapshot cleanup");
+        await withTimeout(cleanRoutes(), "route cleanup");
+        lastHistorySnapshotAt = Date.now();
+      } catch (error) {
+        console.error("[planes-cron] history write failed:", error);
+      }
     }
 
     console.log(
-      `[planes-cron] adsbdb failed lookups: ${failed}/${missingRoutes.length}`,
+      `[planes-cron] adsbdb failed lookups: ${failed}/${missingRouteCount}`,
     );
     console.log("[planes-cron] done");
   } finally {
