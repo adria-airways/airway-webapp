@@ -9,7 +9,7 @@ const OPENSKY_TOKEN_URL =
 const HTTP_TIMEOUT_MS = 10_000;
 const STEP_TIMEOUT_MS = 25_000;
 const HISTORY_SNAPSHOT_INTERVAL_MS =
-  Number(process.env.PLANE_HISTORY_SNAPSHOT_INTERVAL_MS ?? 120_000);
+  Number(process.env.PLANE_HISTORY_SNAPSHOT_INTERVAL_MS ?? 300_000);
 const DB_TIMEOUT_MS = 15_000;
 
 let isFetchingPlanes = false;
