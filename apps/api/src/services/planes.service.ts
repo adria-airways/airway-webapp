@@ -143,7 +143,8 @@ export async function deletePlaneLive(hex: string) {
 export async function getPlaneSnapshot() {
   return await db
     .select()
-    .from(planeSnapshots);
+    .from(planeSnapshots)
+    .limit(1000);
 }
 
 export async function getPlaneSnapshotById(id: number) {
@@ -352,6 +353,7 @@ export async function getFlightHistory(hex: string, callsign: string) {
     .orderBy(
       desc(planeSnapshots.snapshotTime)
     )
+    .limit(500);
 }
 
 export async function getRouteInfo(hex: string, callsign: string) {
