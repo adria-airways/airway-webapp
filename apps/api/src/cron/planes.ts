@@ -8,10 +8,13 @@ const OPENSKY_TOKEN_URL =
   "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 const HTTP_TIMEOUT_MS = 10_000;
 const STEP_TIMEOUT_MS = 25_000;
+const HISTORY_SNAPSHOT_INTERVAL_MS =
+  Number(process.env.PLANE_HISTORY_SNAPSHOT_INTERVAL_MS ?? 120_000);
 
 let isFetchingPlanes = false;
 let openskyToken: string | null = null;
 let openskyTokenExpiresAt = 0;
+let lastHistorySnapshotAt = 0;
 
 function toInt(value: unknown): number | null {
   if (value == null || value === "") {
@@ -168,20 +171,6 @@ async function fetchPlaneData() {
 
     console.log(`[planes-cron] OpenSky returned ${states.length} states`);
 
-    const snapshotRows = await withTimeout(
-      db
-        .insert(snapshots)
-        .values({
-          snapshotTime: new Date(time * 1000),
-          aircraftCount: states.length,
-        })
-        .returning(),
-      "snapshot insert",
-    ) as Array<{ id: number }>;
-    const [snapshot] = snapshotRows;
-
-    const snapshotId = snapshot.id;
-
     const rows = [
       ...new Map(
         states
@@ -308,15 +297,6 @@ async function fetchPlaneData() {
       "live plane update",
     );
 
-    const historyRows = rows.map((r: any) => ({
-      ...r,
-      snapshotId,
-    }));
-
-    await withTimeout(
-      db.insert(planeSnapshots).values(historyRows),
-      "plane snapshot insert",
-    );
     if (rowsWithRouteData.length > 0) {
       await withTimeout(
         db
@@ -327,8 +307,36 @@ async function fetchPlaneData() {
       );
     }
 
-    await withTimeout(cleanSnapshots(), "snapshot cleanup");
-    await withTimeout(cleanRoutes(), "route cleanup");
+    const shouldStoreHistory =
+      Date.now() - lastHistorySnapshotAt >= HISTORY_SNAPSHOT_INTERVAL_MS;
+
+    if (shouldStoreHistory) {
+      const snapshotRows = await withTimeout(
+        db
+          .insert(snapshots)
+          .values({
+            snapshotTime: new Date(time * 1000),
+            aircraftCount: states.length,
+          })
+          .returning(),
+        "snapshot insert",
+      ) as Array<{ id: number }>;
+      const [snapshot] = snapshotRows;
+
+      const historyRows = rows.map((r: any) => ({
+        ...r,
+        snapshotId: snapshot.id,
+      }));
+
+      await withTimeout(
+        db.insert(planeSnapshots).values(historyRows),
+        "plane snapshot insert",
+      );
+
+      await withTimeout(cleanSnapshots(), "snapshot cleanup");
+      await withTimeout(cleanRoutes(), "route cleanup");
+      lastHistorySnapshotAt = Date.now();
+    }
 
     console.log(
       `[planes-cron] adsbdb failed lookups: ${failed}/${missingRoutes.length}`,

@@ -4,6 +4,12 @@ import postgres from "postgres";
 
 const client = postgres(process.env.DATABASE_URL!, {
   prepare: false,
+  idle_timeout: 20,
+  max_lifetime: 60 * 10,
+  connection: {
+    statement_timeout: 10_000,
+    idle_in_transaction_session_timeout: 10_000,
+  },
 });
 
 export const db = drizzle({ client });
