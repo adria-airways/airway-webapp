@@ -7,6 +7,7 @@ const API_URL =
 const OPENSKY_TOKEN_URL =
   "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 const HTTP_TIMEOUT_MS = 10_000;
+const STEP_TIMEOUT_MS = 25_000;
 
 let isFetchingPlanes = false;
 let openskyToken: string | null = null;
@@ -26,6 +27,29 @@ function toFloat(value: unknown): number | null {
   }
 
   return Number(value);
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs = STEP_TIMEOUT_MS,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`[planes-cron] ${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 async function getOpenSkyToken() {
@@ -132,7 +156,7 @@ async function fetchPlaneData() {
   try {
     console.log(`[planes-cron] Starting at ${new Date().toISOString()}`);
 
-    const data = await fetchOpenskyStates();
+    const data = await withTimeout(fetchOpenskyStates(), "OpenSky fetch");
 
     if (!data?.states) {
       console.log("No data from openSky");
@@ -142,13 +166,19 @@ async function fetchPlaneData() {
     const time = data.time;
     const states = data.states;
 
-    const [snapshot] = await db
-      .insert(snapshots)
-      .values({
-        snapshotTime: new Date(time * 1000),
-        aircraftCount: states.length,
-      })
-      .returning();
+    console.log(`[planes-cron] OpenSky returned ${states.length} states`);
+
+    const snapshotRows = await withTimeout(
+      db
+        .insert(snapshots)
+        .values({
+          snapshotTime: new Date(time * 1000),
+          aircraftCount: states.length,
+        })
+        .returning(),
+      "snapshot insert",
+    ) as Array<{ id: number }>;
+    const [snapshot] = snapshotRows;
 
     const snapshotId = snapshot.id;
 
@@ -207,12 +237,15 @@ async function fetchPlaneData() {
       ).values(),
     ];
 
-    const existingRoutes = await db
-      .select({
-        hex: planeRoutes.hex,
-        callsign: planeRoutes.callsign,
-      })
-      .from(planeRoutes);
+    const existingRoutes = await withTimeout(
+      db
+        .select({
+          hex: planeRoutes.hex,
+          callsign: planeRoutes.callsign,
+        })
+        .from(planeRoutes),
+      "existing route lookup",
+    ) as Array<{ hex: string; callsign: string }>;
 
     const existingSet = new Set(
       existingRoutes.map((r) => `${r.hex}:${r.callsign}`),
@@ -226,16 +259,21 @@ async function fetchPlaneData() {
 
     const routeMap = new Map<string, any>();
 
-    for (const missingRoute of missingRoutes) {
-      const res = await fetchRoute(missingRoute.callsign);
+    await withTimeout(
+      (async () => {
+        for (const missingRoute of missingRoutes) {
+          const res = await fetchRoute(missingRoute.callsign);
 
-      if (!res || !res.response?.flightroute) {
-        failed++;
-        continue;
-      }
+          if (!res || !res.response?.flightroute) {
+            failed++;
+            continue;
+          }
 
-      routeMap.set(missingRoute.callsign, res.response.flightroute);
-    }
+          routeMap.set(missingRoute.callsign, res.response.flightroute);
+        }
+      })(),
+      "ADSBDB route enrichment",
+    );
 
     const rowsWithRouteData = rows
       .filter((r: any) => r.callsign)
@@ -262,26 +300,35 @@ async function fetchPlaneData() {
         };
       });
 
-    await db.transaction(async (t) => {
-      await t.delete(planeLive);
-      await t.insert(planeLive).values(rows).onConflictDoNothing();
-    });
+    await withTimeout(
+      db.transaction(async (t) => {
+        await t.delete(planeLive);
+        await t.insert(planeLive).values(rows).onConflictDoNothing();
+      }),
+      "live plane update",
+    );
 
     const historyRows = rows.map((r: any) => ({
       ...r,
       snapshotId,
     }));
 
-    await db.insert(planeSnapshots).values(historyRows);
+    await withTimeout(
+      db.insert(planeSnapshots).values(historyRows),
+      "plane snapshot insert",
+    );
     if (rowsWithRouteData.length > 0) {
-      await db
-        .insert(planeRoutes)
-        .values(rowsWithRouteData)
-        .onConflictDoNothing();
+      await withTimeout(
+        db
+          .insert(planeRoutes)
+          .values(rowsWithRouteData)
+          .onConflictDoNothing(),
+        "route insert",
+      );
     }
 
-    await cleanSnapshots();
-    await cleanRoutes();
+    await withTimeout(cleanSnapshots(), "snapshot cleanup");
+    await withTimeout(cleanRoutes(), "route cleanup");
 
     console.log(
       `[planes-cron] adsbdb failed lookups: ${failed}/${missingRoutes.length}`,
