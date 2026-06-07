@@ -230,9 +230,13 @@ export async function deletePlaneRoute(id: number) {
 }
 
 export async function getSnapshots() {
-  return await db
+  const recentSnapshots = await db
     .select()
-    .from(snapshots);
+    .from(snapshots)
+    .orderBy(desc(snapshots.snapshotTime))
+    .limit(720);
+
+  return recentSnapshots.reverse();
 }
 
 export async function getSnapshotById(id: number) {

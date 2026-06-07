@@ -52,10 +52,15 @@ export interface LatestSnapshotResponse {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
-async function fetchApi<T>(path: string, token: string): Promise<T> {
+async function fetchApi<T>(
+  path: string,
+  token: string,
+  signal?: AbortSignal,
+): Promise<T> {
   console.log("Req: ", `${API_BASE_URL}${path}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    signal,
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -90,10 +95,15 @@ export function getLatestSnapshot(token: string) {
   );
 }
 
-export function getPlanesFromSnapshot(token: string, snapshotId: number) {
+export function getPlanesFromSnapshot(
+  token: string,
+  snapshotId: number,
+  signal?: AbortSignal,
+) {
   return fetchApi<ApiListResponse<PlaneSnapshot>>(
     `/api/planes/app/plane-snapshots/${snapshotId}`,
     token,
+    signal,
   );
 }
 

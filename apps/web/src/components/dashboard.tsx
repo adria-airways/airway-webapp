@@ -121,6 +121,7 @@ export default function Dashboard() {
       return;
     }
 
+    const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setSnapshotLoading(true);
 
@@ -128,20 +129,28 @@ export default function Dashboard() {
         const responseData = await getPlanesFromSnapshot(
           tokenSnapshot,
           snapshot.id,
+          controller.signal,
         );
         const normalized = normalizeSnapshots(responseData);
 
         snapshotPlaneCache.current[snapshot.id] = normalized;
         setSnapshotPlanes(normalized);
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
         console.error("Failed loading snapshot planes:", error);
         setSnapshotPlanes([]);
       } finally {
-        setSnapshotLoading(false);
+        if (!controller.signal.aborted) {
+          setSnapshotLoading(false);
+        }
       }
     }, 250);
 
     return () => {
+      controller.abort();
       window.clearTimeout(timeout);
     };
   }, [mode, snapshots, sliderIndex, tokenSnapshot]);
