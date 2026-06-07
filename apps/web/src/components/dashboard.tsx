@@ -154,9 +154,7 @@ export default function Dashboard() {
         console.error("Failed loading snapshot planes:", error);
         setSnapshotPlanes([]);
       } finally {
-        if (!controller.signal.aborted) {
-          setSnapshotLoading(false);
-        }
+        setSnapshotLoading(false);
       }
     }, 250);
 
@@ -170,30 +168,36 @@ export default function Dashboard() {
     if (mode !== "history" || !tokenSnapshot) return;
 
     const controller = new AbortController();
-    const neighborIndexes = [sliderIndex - 1, sliderIndex + 1].filter(
-      (index) => index >= 0 && index < snapshots.length,
-    );
 
-    for (const index of neighborIndexes) {
-      const snapshot = snapshots[index];
-
-      if (!snapshot || snapshotPlaneCache.current[snapshot.id]) {
-        continue;
-      }
-
-      loadSnapshotPlanes(tokenSnapshot, snapshot, controller.signal).catch(
-        (error) => {
-          if (error instanceof DOMException && error.name === "AbortError") {
-            return;
-          }
-
-          console.error("Failed prefetching snapshot planes:", error);
-        },
+    const timeout = window.setTimeout(async () => {
+      const neighborIndexes = [sliderIndex - 1, sliderIndex + 1].filter(
+        (index) => index >= 0 && index < snapshots.length,
       );
-    }
+
+      for (const index of neighborIndexes) {
+        if (controller.signal.aborted) break;
+
+        const snapshot = snapshots[index];
+
+        if (!snapshot || snapshotPlaneCache.current[snapshot.id]) {
+          continue;
+        }
+
+        await loadSnapshotPlanes(tokenSnapshot, snapshot, controller.signal).catch(
+          (error) => {
+            if (error instanceof DOMException && error.name === "AbortError") {
+              return;
+            }
+
+            console.error("Failed prefetching snapshot planes:", error);
+          },
+        );
+      }
+    }, 500);
 
     return () => {
       controller.abort();
+      window.clearTimeout(timeout);
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 

@@ -198,12 +198,6 @@ export async function getPlanesFromSnapshotById(req: Request, res: Response) {
 
   const data = await planesService.getPlanesFromSnapshotById(parsed.data.id);
 
-  if(data.length === 0){
-    return res.status(404).json({
-        message: "Snapshot with that id not found!",
-      });
-  }
-
   res.json({ data });
 }
 

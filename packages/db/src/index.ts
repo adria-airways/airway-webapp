@@ -4,7 +4,7 @@ import postgres from "postgres";
 
 const client = postgres(process.env.DATABASE_URL!, {
   prepare: false,
-  max: Number(process.env.DB_POOL_MAX ?? 3),
+  max: Number(process.env.DB_POOL_MAX ?? 10),
   connect_timeout: 10,
   idle_timeout: 20,
   max_lifetime: 60 * 10,
