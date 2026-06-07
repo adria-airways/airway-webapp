@@ -43,6 +43,26 @@ export default function Dashboard() {
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
+  const loadSnapshotPlanes = useCallback(
+    async (token: string, snapshot: Snapshot, signal?: AbortSignal) => {
+      const cachedPlanes = snapshotPlaneCache.current[snapshot.id];
+      if (cachedPlanes) {
+        return cachedPlanes;
+      }
+
+      const responseData = await getPlanesFromSnapshot(
+        token,
+        snapshot.id,
+        signal,
+      );
+      const normalized = normalizeSnapshots(responseData);
+
+      snapshotPlaneCache.current[snapshot.id] = normalized;
+      return normalized;
+    },
+    [],
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -114,26 +134,17 @@ export default function Dashboard() {
     const snapshot = snapshots[sliderIndex];
     if (!snapshot || !tokenSnapshot) return;
 
-    const cachedPlanes = snapshotPlaneCache.current[snapshot.id];
-
-    if (cachedPlanes) {
-      setSnapshotPlanes(cachedPlanes);
-      return;
-    }
-
     const controller = new AbortController();
     const timeout = window.setTimeout(async () => {
       setSnapshotLoading(true);
 
       try {
-        const responseData = await getPlanesFromSnapshot(
+        const normalized = await loadSnapshotPlanes(
           tokenSnapshot,
-          snapshot.id,
+          snapshot,
           controller.signal,
         );
-        const normalized = normalizeSnapshots(responseData);
 
-        snapshotPlaneCache.current[snapshot.id] = normalized;
         setSnapshotPlanes(normalized);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -153,7 +164,38 @@ export default function Dashboard() {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [mode, snapshots, sliderIndex, tokenSnapshot]);
+  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
+
+  useEffect(() => {
+    if (mode !== "history" || !tokenSnapshot) return;
+
+    const controller = new AbortController();
+    const neighborIndexes = [sliderIndex - 1, sliderIndex + 1].filter(
+      (index) => index >= 0 && index < snapshots.length,
+    );
+
+    for (const index of neighborIndexes) {
+      const snapshot = snapshots[index];
+
+      if (!snapshot || snapshotPlaneCache.current[snapshot.id]) {
+        continue;
+      }
+
+      loadSnapshotPlanes(tokenSnapshot, snapshot, controller.signal).catch(
+        (error) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+
+          console.error("Failed prefetching snapshot planes:", error);
+        },
+      );
+    }
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
