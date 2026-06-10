@@ -117,7 +117,7 @@ export default function MapView({
 
         <div className="relative flex flex-col items-center justify-end">
           {isStyleOpen && (
-            <div className="absolute bottom-full right-0 mb-3 p-1.5 rounded-lg shadow-md border bg-white border-gray-100 flex flex-col gap-1 z-1001 min-w-25">
+            <div className="absolute bottom-full right-0 mb-3 p-1.5 rounded-lg shadow-md border bg-white border-gray-100 flex flex-col gap-1 z-4001 min-w-25">
               <MapStyleToggle active={mapStyle} setActive={setMapStyle} />
             </div>
           )}
