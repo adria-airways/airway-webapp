@@ -25,6 +25,44 @@ import { type FilterData } from "./filter";
 import closeSide from "../assets/closeSide.png";
 import openSide from "../assets/openSide.png";
 
+const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
+
+type LiveSnapshotAnimation = {
+  from: Planes[];
+  to: Planes[];
+  fromTime: string;
+  toTime: string;
+};
+
+function getSnapshotAnimationDuration(fromTime: string, toTime: string) {
+  const duration = new Date(toTime).getTime() - new Date(fromTime).getTime();
+  return duration > 0 ? duration : SNAPSHOT_ANIMATION_FALLBACK_MS;
+}
+
+function interpolatePlanes(
+  fromPlanes: Planes[],
+  toPlanes: Planes[],
+  progress: number,
+) {
+  const targetByHex = new Map(toPlanes.map((plane) => [plane.hex, plane]));
+
+  return fromPlanes.map((plane) => {
+    const target = targetByHex.get(plane.hex);
+
+    if (!target) return plane;
+
+    return {
+      ...plane,
+      latitude:
+        plane.latitude + (target.latitude - plane.latitude) * progress,
+      longitude:
+        plane.longitude + (target.longitude - plane.longitude) * progress,
+      heading: target.heading,
+      groundSpeed: target.groundSpeed,
+    };
+  });
+}
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -44,6 +82,9 @@ export default function Dashboard() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [liveSnapshotAnimation, setLiveSnapshotAnimation] =
+    useState<LiveSnapshotAnimation | null>(null);
+  const [animationNow, setAnimationNow] = useState(() => Date.now());
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -298,7 +339,28 @@ export default function Dashboard() {
     }
   };
 
-  const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+  const animatedLivePlanes = useMemo(() => {
+    if (!liveSnapshotAnimation) return planes;
+
+    const duration = getSnapshotAnimationDuration(
+      liveSnapshotAnimation.fromTime,
+      liveSnapshotAnimation.toTime,
+    );
+    const animationStart = new Date(liveSnapshotAnimation.toTime).getTime();
+    const progress = Math.min(
+      Math.max((animationNow - animationStart) / duration, 0),
+      1,
+    );
+
+    return interpolatePlanes(
+      liveSnapshotAnimation.from,
+      liveSnapshotAnimation.to,
+      progress,
+    );
+  }, [animationNow, liveSnapshotAnimation, planes]);
+
+  const visiblePlanes =
+    mode === "history" ? snapshotPlanes : animatedLivePlanes;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
     if (activeFilters.callsign) {
@@ -334,24 +396,34 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex h-full min-h-0 w-full relative overflow-hidden">
-        {isSidebarOpen && (
-          <Sidebar
-            planes={filteredPlanes}
-            tokenSnapshot={tokenSnapshot}
-            selectedPlane={selectedPlane}
-            isFilterOpen={isFilterOpen}
-            onSelect={handleSelect}
-            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-            onRouteLoaded={handleRouteLoaded}
-          />
-        )}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <MapView
+          planes={filteredPlanes}
+          tokenSnapshot={tokenSnapshot}
+          selectedPlane={selectedPlane}
+          weatherTime={
+            mode === "history"
+              ? (snapshots[sliderIndex]?.snapshotTime ?? null)
+              : null
+          }
+        />
+
+        <Sidebar
+          planes={filteredPlanes}
+          tokenSnapshot={tokenSnapshot}
+          selectedPlane={selectedPlane}
+          isOpen={isSidebarOpen}
+          isFilterOpen={isFilterOpen}
+          onSelect={handleSelect}
+          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+          onRouteLoaded={handleRouteLoaded}
+        />
 
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute top-[45%] left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
+          className="absolute top-[45%] h-20 z-[1200] bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
           style={{
-            left: isSidebarOpen ? "320px" : "0px",
+            left: isSidebarOpen ? "min(24rem, 85vw)" : "0px",
           }}
         >
           {isSidebarOpen ? (
@@ -374,16 +446,6 @@ export default function Dashboard() {
           onClose={() => setIsFilterOpen(false)}
           onApplyFilters={handleApplyFilters}
           onResetFilters={handleResetFilters}
-        />
-        <MapView
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          weatherTime={
-            mode === "history"
-              ? (snapshots[sliderIndex]?.snapshotTime ?? null)
-              : null
-          }
         />
       </div>
 
