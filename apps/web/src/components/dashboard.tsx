@@ -2,7 +2,7 @@ import "../global.css";
 import { useAuth, UserButton, useUser } from "@clerk/clerk-react";
 import MapView from "./mapView";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "./sidebar";
 import Filter from "./filter";
 import SnapshotTimeline from "./snapshotTimeline";
@@ -22,8 +22,61 @@ import {
 
 import { type FilterData } from "./filter";
 
-import closeSide from "../assets/closeSide.png"
-import openSide from "../assets/openSide.png"
+import closeSide from "../assets/closeSide.png";
+import openSide from "../assets/openSide.png";
+
+const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
+const SNAPSHOT_ANIMATION_TICK_MS = 100;
+
+type LiveSnapshotAnimation = {
+  from: Planes[];
+  to: Planes[];
+  fromTime: string;
+  toTime: string;
+  startedAt: number;
+};
+
+function getSnapshotAnimationDuration(fromTime: string, toTime: string) {
+  const duration = new Date(toTime).getTime() - new Date(fromTime).getTime();
+  return duration > 0 ? duration : SNAPSHOT_ANIMATION_FALLBACK_MS;
+}
+
+function getBearing(from: Planes, to: Planes) {
+  const fromLat = (from.latitude * Math.PI) / 180;
+  const toLat = (to.latitude * Math.PI) / 180;
+  const deltaLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+  const y = Math.sin(deltaLon) * Math.cos(toLat);
+  const x =
+    Math.cos(fromLat) * Math.sin(toLat) -
+    Math.sin(fromLat) * Math.cos(toLat) * Math.cos(deltaLon);
+
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+function interpolatePlanes(
+  fromPlanes: Planes[],
+  toPlanes: Planes[],
+  progress: number,
+) {
+  const targetByHex = new Map(toPlanes.map((plane) => [plane.hex, plane]));
+
+  return fromPlanes.map((plane) => {
+    const target = targetByHex.get(plane.hex);
+
+    if (!target) return plane;
+
+    return {
+      ...plane,
+      latitude:
+        plane.latitude + (target.latitude - plane.latitude) * progress,
+      longitude:
+        plane.longitude + (target.longitude - plane.longitude) * progress,
+      heading: getBearing(plane, target),
+      groundSpeed: target.groundSpeed,
+    };
+  });
+}
 
 export default function Dashboard() {
   const { getToken } = useAuth();
@@ -44,6 +97,9 @@ export default function Dashboard() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [liveSnapshotAnimation, setLiveSnapshotAnimation] =
+    useState<LiveSnapshotAnimation | null>(null);
+  const [animationNow, setAnimationNow] = useState(() => Date.now());
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -117,7 +173,7 @@ export default function Dashboard() {
 
         setSnapshots(sortedSnapshots);
 
-        if (sortedSnapshots.length > 0) {
+        if (mode === "live" && sortedSnapshots.length > 0) {
           setSliderIndex(sortedSnapshots.length - 1);
         }
       } catch (error) {
@@ -126,11 +182,53 @@ export default function Dashboard() {
     }
 
     fetchSnapshots();
+    const interval = window.setInterval(fetchSnapshots, 30000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [getToken]);
+  }, [getToken, mode]);
+
+  useEffect(() => {
+    if (mode !== "live" || !tokenSnapshot || snapshots.length < 2) return;
+
+    const controller = new AbortController();
+    const fromSnapshot = snapshots[snapshots.length - 2];
+    const toSnapshot = snapshots[snapshots.length - 1];
+    const token = tokenSnapshot;
+
+    if (!fromSnapshot || !toSnapshot) return;
+
+    async function loadLiveSnapshotAnimation() {
+      try {
+        const [from, to] = await Promise.all([
+          loadSnapshotPlanes(token, fromSnapshot, controller.signal),
+          loadSnapshotPlanes(token, toSnapshot, controller.signal),
+        ]);
+
+        setLiveSnapshotAnimation({
+          from,
+          to,
+          fromTime: fromSnapshot.snapshotTime,
+          toTime: toSnapshot.snapshotTime,
+          startedAt: Date.now(),
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Failed loading live snapshot animation:", error);
+      }
+    }
+
+    void loadLiveSnapshotAnimation();
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadSnapshotPlanes, mode, snapshots, tokenSnapshot]);
 
   useEffect(() => {
     if (mode !== "history") return;
@@ -207,6 +305,18 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
+  useEffect(() => {
+    if (mode !== "live" || !liveSnapshotAnimation) return;
+
+    const interval = window.setInterval(() => {
+      setAnimationNow(Date.now());
+    }, SNAPSHOT_ANIMATION_TICK_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [liveSnapshotAnimation, mode]);
+
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
   };
@@ -245,7 +355,27 @@ export default function Dashboard() {
     }
   };
 
-  const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+  const animatedLivePlanes = useMemo(() => {
+    if (!liveSnapshotAnimation) return planes;
+
+    const duration = getSnapshotAnimationDuration(
+      liveSnapshotAnimation.fromTime,
+      liveSnapshotAnimation.toTime,
+    );
+    const progress = Math.min(
+      Math.max((animationNow - liveSnapshotAnimation.startedAt) / duration, 0),
+      1,
+    );
+
+    return interpolatePlanes(
+      liveSnapshotAnimation.from,
+      liveSnapshotAnimation.to,
+      progress,
+    );
+  }, [animationNow, liveSnapshotAnimation, planes]);
+
+  const visiblePlanes =
+    mode === "history" ? snapshotPlanes : animatedLivePlanes;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
     if (activeFilters.callsign) {
@@ -281,35 +411,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex h-full min-h-0 w-full relative overflow-hidden">
-        {isSidebarOpen && (
-          <Sidebar
-            planes={filteredPlanes}
-            tokenSnapshot={tokenSnapshot}
-            selectedPlane={selectedPlane}
-            isFilterOpen={isFilterOpen}
-            onSelect={handleSelect}
-            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-            onRouteLoaded={handleRouteLoaded}
-          />
-        )}
-
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute top-[45%] left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
-          style={{
-            left: isSidebarOpen ? "320px" : "0px"
-          }}
-        >
-          {isSidebarOpen ? <img src={closeSide} alt="Close list" className="w-6 h-6 object-contain"/> : <img src={openSide} alt="Open list" className="w-6 h-6 object-contain"/>}
-        </button>
-        
-        <Filter
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          onApplyFilters={handleApplyFilters}
-          onResetFilters={handleResetFilters}
-        />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         <MapView
           planes={filteredPlanes}
           tokenSnapshot={tokenSnapshot}
@@ -319,6 +421,46 @@ export default function Dashboard() {
               ? (snapshots[sliderIndex]?.snapshotTime ?? null)
               : null
           }
+        />
+
+        <Sidebar
+          planes={filteredPlanes}
+          tokenSnapshot={tokenSnapshot}
+          selectedPlane={selectedPlane}
+          isOpen={isSidebarOpen}
+          isFilterOpen={isFilterOpen}
+          onSelect={handleSelect}
+          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+          onRouteLoaded={handleRouteLoaded}
+        />
+
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute top-[45%] h-20 z-[1200] bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
+          style={{
+            left: isSidebarOpen ? "min(24rem, 85vw)" : "0px",
+          }}
+        >
+          {isSidebarOpen ? (
+            <img
+              src={closeSide}
+              alt="Close list"
+              className="w-6 h-6 object-contain"
+            />
+          ) : (
+            <img
+              src={openSide}
+              alt="Open list"
+              className="w-6 h-6 object-contain"
+            />
+          )}
+        </button>
+
+        <Filter
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
         />
       </div>
 
