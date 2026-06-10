@@ -18,8 +18,8 @@ export function MapStyleToggle({
           key={opt}
           onClick={() => setActive(opt)}
           className={`px-2 py-1 rounded text-sm ${
-            active === opt ? "bg-blue-500 text-white" : "bg-white"
-          }`}
+            active === opt ? "bg-blue-500 text-white" : "bg-white hover:bg-gray-200"
+          } `}
         >
           {opt}
         </button>

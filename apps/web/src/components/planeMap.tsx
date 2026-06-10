@@ -18,30 +18,35 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
   const { hex, longitude, latitude, callsign, heading, originCountry } = plane;
   const [route, setRoute] = useState<PlaneRoute | null>(null);
   const [loading, setLoading] = useState(false);
+  const displayRoute = route ?? plane;
 
   const angle = heading ?? 0;
 
-  const dynamicIcon = L.divIcon({
-    html: `<div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-      <img src="${planeIcon}"
-        style="
-          transform: rotate(${angle}deg);
-          width: 32px; height: 32px;
-          display: block;
-          filter: drop-shadow(1px 0 0 black)
-                  drop-shadow(-1px 0 0 black)
-                  drop-shadow(0 1px 0 black)
-                  drop-shadow(0 -1px 0 black);
-        " />
-    </div>`,
-    className: "bg-transparent border-none",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-  });
+  const dynamicIcon = useMemo(
+    () =>
+      L.divIcon({
+        html: `<div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+          <img src="${planeIcon}"
+            style="
+              transform: rotate(${angle}deg);
+              width: 32px; height: 32px;
+              display: block;
+              filter: drop-shadow(1px 0 0 black)
+                      drop-shadow(-1px 0 0 black)
+                      drop-shadow(0 1px 0 black)
+                      drop-shadow(0 -1px 0 black);
+            " />
+        </div>`,
+        className: "airway-plane-marker bg-transparent border-none",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16],
+      }),
+    [angle],
+  );
 
   const fetchRouteDetails = async () => {
-    if (route || loading || !callsign) return;
+    if (route || plane.airline || loading || !callsign) return;
 
     setLoading(true);
     try {
@@ -78,21 +83,21 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
             </p>
           )}
 
-          {!loading && route ? (
+          {!loading && displayRoute.airline ? (
             <div>
-                {!loading && route.airline ? (
+                {!loading && displayRoute.airline ? (
                     <div>
-                        <p className="text-center">{route.airline || "Unknown Airline"}</p>
+                        <p className="text-center">{displayRoute.airline || "Unknown Airline"}</p>
                     </div>
                 ) : null}
                 
                 <div className="text-center">
                     <p className="text-blue-600 font-medium">
-                      {route.flyingFromCountry || "Unknown"}, {route.flyingFromCity || "Unknown"}
+                      {displayRoute.flyingFromCountry || "Unknown"}, {displayRoute.flyingFromCity || "Unknown"}
                     </p>
                     <p className="m-2">↓</p>
                     <p className="text-blue-600 font-medium">
-                      {route.flyingToCountry || "Unknown"}, {route.flyingToCity || "Unknown"}
+                      {displayRoute.flyingToCountry || "Unknown"}, {displayRoute.flyingToCity || "Unknown"}
                     </p>
                 </div>
             </div>
@@ -130,6 +135,16 @@ export default function PlaneMap({
     
     // Prevent re-zooming
     const lastFlownTo = useRef<string | null>(null);
+
+    useEffect(() => {
+        map.invalidateSize();
+
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+        }, 200);
+
+        return () => clearTimeout(timer);
+    }, [planes, map]);
 
     // Pan to selected plane
     useEffect(() => {

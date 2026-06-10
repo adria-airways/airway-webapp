@@ -6,6 +6,7 @@ interface SnapshotTimelineProps {
   mode: "live" | "history";
   loading: boolean;
   onChangeIndex: (index: number) => void;
+  onCommitIndex: (index: number) => void;
   onReturnLive: () => void;
 }
 
@@ -15,12 +16,13 @@ export default function SnapshotTimeline({
   mode,
   loading,
   onChangeIndex,
+  onCommitIndex,
   onReturnLive,
 }: SnapshotTimelineProps) {
   const selectedSnapshot = snapshots[sliderIndex] ?? null;
 
   return (
-    <div className="absolute bottom-16 left-1/2 z-1000 w-[min(520px,calc(100vw-9rem))] -translate-x-1/2 bg-white/95 border border-gray-200 shadow-lg rounded-lg px-4 py-3">
+    <div className="absolute bottom-16 left-1/2 z-[1000] w-[calc(100vw-2rem)] max-w-[520px] -translate-x-1/2 bg-white/95 border border-gray-200 shadow-lg rounded-lg px-4 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-gray-900">
@@ -53,6 +55,11 @@ export default function SnapshotTimeline({
           value={sliderIndex}
           disabled={snapshots.length === 0}
           onChange={(event) => onChangeIndex(Number(event.target.value))}
+          onPointerUp={(event) =>
+            onCommitIndex(Number(event.currentTarget.value))
+          }
+          onKeyUp={(event) => onCommitIndex(Number(event.currentTarget.value))}
+          onBlur={(event) => onCommitIndex(Number(event.currentTarget.value))}
           className="w-full accent-blue-600"
         />
 

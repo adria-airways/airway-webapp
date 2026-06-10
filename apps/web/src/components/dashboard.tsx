@@ -2,7 +2,7 @@ import "../global.css";
 import { useAuth, UserButton, useUser } from "@clerk/clerk-react";
 import MapView from "./mapView";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "./sidebar";
 import Filter from "./filter";
 import SnapshotTimeline from "./snapshotTimeline";
@@ -22,6 +22,80 @@ import {
 
 import { type FilterData } from "./filter";
 
+import closeSide from "../assets/closeSide.png";
+import openSide from "../assets/openSide.png";
+
+const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
+const SNAPSHOT_ANIMATION_TICK_MS = 100;
+
+type LiveSnapshotAnimation = {
+  fromId: number;
+  toId: number;
+  from: Planes[];
+  to: Planes[];
+  fromTime: string;
+  toTime: string;
+  startedAt: number;
+};
+
+function getSnapshotAnimationDuration(fromTime: string, toTime: string) {
+  const duration = new Date(toTime).getTime() - new Date(fromTime).getTime();
+  return duration > 0 ? duration : SNAPSHOT_ANIMATION_FALLBACK_MS;
+}
+
+function getBearing(from: Planes, to: Planes) {
+  const fromLat = (from.latitude * Math.PI) / 180;
+  const toLat = (to.latitude * Math.PI) / 180;
+  const deltaLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+  const y = Math.sin(deltaLon) * Math.cos(toLat);
+  const x =
+    Math.cos(fromLat) * Math.sin(toLat) -
+    Math.sin(fromLat) * Math.cos(toLat) * Math.cos(deltaLon);
+
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+function interpolatePlanes(
+  fromPlanes: Planes[],
+  toPlanes: Planes[],
+  progress: number,
+) {
+  const targetByHex = new Map(toPlanes.map((plane) => [plane.hex, plane]));
+
+  return fromPlanes.map((plane) => {
+    const target = targetByHex.get(plane.hex);
+
+    if (!target) return plane;
+
+    return {
+      ...plane,
+      latitude:
+        plane.latitude + (target.latitude - plane.latitude) * progress,
+      longitude:
+        plane.longitude + (target.longitude - plane.longitude) * progress,
+      heading: getBearing(plane, target),
+      groundSpeed: target.groundSpeed,
+    };
+  });
+}
+
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+      
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -40,8 +114,18 @@ export default function Dashboard() {
   const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [committedSnapshotIndex, setCommittedSnapshotIndex] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Resolved State from Conflict Branches
+  const [liveSnapshotAnimation, setLiveSnapshotAnimation] = useState<LiveSnapshotAnimation | null>(null);
+  const [animationNow, setAnimationNow] = useState(() => Date.now());
+  const [userLocation, setUserLocation] = useState<{lat: number; lon: number} | null>(null);
+  const [isLocationFilterActive, setIsLocationFilterActive] = useState(false);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
+  const liveSnapshotPairKey = useRef<string | null>(null);
+  const maxRadiusKm = 30;
 
   const loadSnapshotPlanes = useCallback(
     async (token: string, snapshot: Snapshot, signal?: AbortSignal) => {
@@ -63,6 +147,7 @@ export default function Dashboard() {
     [],
   );
 
+  // Poll for Live Planes
   useEffect(() => {
     let cancelled = false;
 
@@ -94,6 +179,7 @@ export default function Dashboard() {
     };
   }, [getToken, mode]);
 
+  // Load Timelines/Snapshots
   useEffect(() => {
     let cancelled = false;
 
@@ -113,8 +199,9 @@ export default function Dashboard() {
 
         setSnapshots(sortedSnapshots);
 
-        if (sortedSnapshots.length > 0) {
+        if (mode === "live" && sortedSnapshots.length > 0) {
           setSliderIndex(sortedSnapshots.length - 1);
+          setCommittedSnapshotIndex(sortedSnapshots.length - 1);
         }
       } catch (error) {
         console.error("Failed loading snapshots:", error);
@@ -122,16 +209,66 @@ export default function Dashboard() {
     }
 
     fetchSnapshots();
+    const interval = window.setInterval(fetchSnapshots, 30000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [getToken]);
+  }, [getToken, mode]);
 
+  // Handle Animation Pre-loading
+  useEffect(() => {
+    if (mode !== "live" || !tokenSnapshot || snapshots.length < 2) return;
+
+    const controller = new AbortController();
+    const fromSnapshot = snapshots[snapshots.length - 2];
+    const toSnapshot = snapshots[snapshots.length - 1];
+    const token = tokenSnapshot;
+
+    if (!fromSnapshot || !toSnapshot) return;
+
+    const pairKey = `${fromSnapshot.id}:${toSnapshot.id}`;
+    if (liveSnapshotPairKey.current === pairKey) return;
+
+    async function loadLiveSnapshotAnimation() {
+      try {
+        const [from, to] = await Promise.all([
+          loadSnapshotPlanes(token, fromSnapshot, controller.signal),
+          loadSnapshotPlanes(token, toSnapshot, controller.signal),
+        ]);
+
+        liveSnapshotPairKey.current = pairKey;
+        setLiveSnapshotAnimation({
+          fromId: fromSnapshot.id,
+          toId: toSnapshot.id,
+          from,
+          to,
+          fromTime: fromSnapshot.snapshotTime,
+          toTime: toSnapshot.snapshotTime,
+          startedAt: Date.now(),
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Failed loading live snapshot animation:", error);
+      }
+    }
+
+    void loadLiveSnapshotAnimation();
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadSnapshotPlanes, mode, snapshots, tokenSnapshot]);
+
+  // Historic Playback Core
   useEffect(() => {
     if (mode !== "history") return;
 
-    const snapshot = snapshots[sliderIndex];
+    const snapshot = snapshots[committedSnapshotIndex];
     if (!snapshot || !tokenSnapshot) return;
 
     const controller = new AbortController();
@@ -154,7 +291,9 @@ export default function Dashboard() {
         console.error("Failed loading snapshot planes:", error);
         setSnapshotPlanes([]);
       } finally {
-        setSnapshotLoading(false);
+        if (!controller.signal.aborted) {
+          setSnapshotLoading(false);
+        }
       }
     }, 250);
 
@@ -162,44 +301,44 @@ export default function Dashboard() {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
+  }, [
+    committedSnapshotIndex,
+    loadSnapshotPlanes,
+    mode,
+    snapshots,
+    tokenSnapshot,
+  ]);
 
+  // Live Interpolation Clock Tick Tracker
   useEffect(() => {
-    if (mode !== "history" || !tokenSnapshot) return;
+    if (mode !== "live" || !liveSnapshotAnimation) return;
 
-    const controller = new AbortController();
-
-    const timeout = window.setTimeout(async () => {
-      const neighborIndexes = [sliderIndex - 1, sliderIndex + 1].filter(
-        (index) => index >= 0 && index < snapshots.length,
-      );
-
-      for (const index of neighborIndexes) {
-        if (controller.signal.aborted) break;
-
-        const snapshot = snapshots[index];
-
-        if (!snapshot || snapshotPlaneCache.current[snapshot.id]) {
-          continue;
-        }
-
-        await loadSnapshotPlanes(tokenSnapshot, snapshot, controller.signal).catch(
-          (error) => {
-            if (error instanceof DOMException && error.name === "AbortError") {
-              return;
-            }
-
-            console.error("Failed prefetching snapshot planes:", error);
-          },
-        );
-      }
-    }, 500);
+    const interval = window.setInterval(() => {
+      setAnimationNow(Date.now());
+    }, SNAPSHOT_ANIMATION_TICK_MS);
 
     return () => {
-      controller.abort();
-      window.clearTimeout(timeout);
+      window.clearInterval(interval);
     };
-  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
+  }, [liveSnapshotAnimation, mode]);
+
+  // Geolocation Mount Handler Tracker
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
+      },
+      (error) => {
+        console.error("Error retrieving geolocation:", error);
+      },
+      { enableHighAccuracy: true }
+    );
+  }, []);
 
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
@@ -229,19 +368,76 @@ export default function Dashboard() {
     setSelectedPlane(null);
   };
 
+  const handleCommitSnapshotIndex = (index: number) => {
+    setMode("history");
+    setCommittedSnapshotIndex(index);
+    setSelectedPlane(null);
+  };
+
   const handleReturnLive = () => {
     setMode("live");
     setSelectedPlane(null);
     setSnapshotPlanes([]);
+    liveSnapshotPairKey.current = null;
+    setLiveSnapshotAnimation(null);
+    setAnimationNow(Date.now());
 
     if (snapshots.length > 0) {
       setSliderIndex(snapshots.length - 1);
+      setCommittedSnapshotIndex(snapshots.length - 1);
     }
   };
 
-  const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+  // Interpolated Flight Calculations
+  const animatedLivePlanes = useMemo(() => {
+    if (!liveSnapshotAnimation) return planes;
 
+    const duration = getSnapshotAnimationDuration(
+      liveSnapshotAnimation.fromTime,
+      liveSnapshotAnimation.toTime,
+    );
+    const progress = Math.min(
+      Math.max((animationNow - liveSnapshotAnimation.startedAt) / duration, 0),
+      1,
+    );
+
+    const routeByHex = new Map(planes.map((plane) => [plane.hex, plane]));
+
+    return interpolatePlanes(
+      liveSnapshotAnimation.from,
+      liveSnapshotAnimation.to,
+      progress,
+    ).map((plane) => {
+      const livePlane = routeByHex.get(plane.hex);
+
+      return {
+        ...plane,
+        airline: livePlane?.airline ?? plane.airline,
+        flyingFromCity: livePlane?.flyingFromCity ?? plane.flyingFromCity,
+        flyingFromCountry:
+          livePlane?.flyingFromCountry ?? plane.flyingFromCountry,
+        flyingToCity: livePlane?.flyingToCity ?? plane.flyingToCity,
+        flyingToCountry: livePlane?.flyingToCountry ?? plane.flyingToCountry,
+      };
+    });
+  }, [animationNow, liveSnapshotAnimation, planes]);
+
+  // Choose Dataset Basis according to Screen state mode
+  const visiblePlanes = mode === "history" ? snapshotPlanes : animatedLivePlanes;
+
+  // Process Dataset Calculations down past location bounds thresholds
   const filteredPlanes = visiblePlanes.filter((plane) => {
+    if (isLocationFilterActive && userLocation) {
+      const userLat = userLocation.lat as number;
+      const userLon = userLocation.lon as number;
+      const planeLat = plane.latitude as number;
+      const planeLon = plane.longitude as number;
+
+      const distance = getDistanceKm(userLat, userLon, planeLat, planeLon);
+
+      if (distance > maxRadiusKm) return false;
+    }
+
     if (activeFilters.callsign) {
       const searchCallsign = activeFilters.callsign.toUpperCase().trim();
       if (!plane.callsign.toUpperCase().includes(searchCallsign)) return false;
@@ -249,11 +445,11 @@ export default function Dashboard() {
 
     if (activeFilters.airline) {
       const cachedRoute = routeCache[plane.hex];
-      if (!cachedRoute || !cachedRoute.airline) return false;
+      const airline = plane.airline ?? cachedRoute?.airline;
+      if (!airline) return false;
 
       const searchAirline = activeFilters.airline.toLowerCase().trim();
-      if (!cachedRoute.airline.toLowerCase().includes(searchAirline))
-        return false;
+      if (!airline.toLowerCase().includes(searchAirline)) return false;
     }
 
     return true;
@@ -275,32 +471,58 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex h-full">
-        <Sidebar
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          isFilterOpen={isFilterOpen}
-          onSelect={handleSelect}
-          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-          onRouteLoaded={handleRouteLoaded}
-        />
-        <Filter
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          onApplyFilters={handleApplyFilters}
-          onResetFilters={handleResetFilters}
-        />
-        <MapView
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          weatherTime={
-            mode === "history"
-              ? (snapshots[sliderIndex]?.snapshotTime ?? null)
-              : null
-          }
-        />
+      <div className="flex flex-1 h-full min-h-0 w-full relative overflow-hidden">
+        
+        {isSidebarOpen && (
+          <Sidebar
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            isOpen={isSidebarOpen}
+            isFilterOpen={isFilterOpen}
+            onSelect={handleSelect}
+            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+            onRouteLoaded={handleRouteLoaded}
+            isLocationFilterActive={isLocationFilterActive}
+            onToggleLocationFilter={() => setIsLocationFilterActive(!isLocationFilterActive)}
+            hasLocation={!!userLocation}
+          />
+        )}
+
+       <div className="flex-1 h-full min-w-0 relative overflow-hidden">
+          
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-[45%] h-20 z-5000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm cursor-pointer"
+            style={{
+              left: isSidebarOpen ? "384px" : "0px",
+            }}
+          >
+            {isSidebarOpen ? (
+              <img src={closeSide} alt="Close list" className="w-6 h-6 object-contain"/>
+            ) : (
+              <img src={openSide} alt="Open list" className="w-6 h-6 object-contain"/>
+            )}
+          </button>
+          
+          <Filter
+            isOpen={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            onApplyFilters={handleApplyFilters}
+            onResetFilters={handleResetFilters}
+          />
+
+          <MapView
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            weatherTime={
+              mode === "history"
+                ? (snapshots[sliderIndex]?.snapshotTime ?? null)
+                : null
+            }
+          />
+        </div>
       </div>
 
       <SnapshotTimeline
@@ -309,6 +531,7 @@ export default function Dashboard() {
         mode={mode}
         loading={snapshotLoading}
         onChangeIndex={handleChangeSnapshotIndex}
+        onCommitIndex={handleCommitSnapshotIndex}
         onReturnLive={handleReturnLive}
       />
 

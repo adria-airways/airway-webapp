@@ -5,6 +5,7 @@ export function normalizeLivePlanes(responseData: any): Planes[] {
 
   return planeArr.map((p: any) => {
     const src = p.plane_live ?? p;
+    const route = p.plane_routes ?? p.planeRoutes ?? null;
 
     return {
       hex: src.hex,
@@ -14,6 +15,11 @@ export function normalizeLivePlanes(responseData: any): Planes[] {
       originCountry: src.originCountry ?? "UNKNOWN",
       heading: Number(src.heading ?? 0),
       groundSpeed: Number(src.groundSpeed ?? 0),
+      airline: route?.airline ?? null,
+      flyingFromCity: route?.flyingFromCity ?? null,
+      flyingFromCountry: route?.flyingFromCountry ?? null,
+      flyingToCity: route?.flyingToCity ?? null,
+      flyingToCountry: route?.flyingToCountry ?? null,
     };
   });
 }

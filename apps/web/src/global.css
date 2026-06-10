@@ -1,1 +1,8 @@
 @import 'tailwindcss';
+
+.airway-plane-marker,
+.airway-plane-marker *,
+.airway-weather-marker,
+.airway-weather-marker * {
+  pointer-events: auto;
+}

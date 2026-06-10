@@ -7,6 +7,8 @@ import { MapLegend } from "./mapLegend";
 import { LayerToggle } from "./layerToggle";
 import { MapStyleToggle } from "./mapStyleToggle";
 
+import mapLayers from "../assets/mapStyle.png"
+
 export type MapStyle = "standard" | "dark" | "topography" | "satellite";
 
 const MAP_LAYERS: Record<MapStyle, { url: string; attribution: string }> = {
@@ -39,13 +41,19 @@ function PaneInitializer() {
   useEffect(() => {
     if (!map.getPane("weatherPane")) {
       const weatherPane = map.createPane("weatherPane");
-      weatherPane.style.zIndex = "450";
+      weatherPane.style.zIndex = "625";
       weatherPane.style.pointerEvents = "none";
     }
 
     if (!map.getPane("planePane")) {
       const planePane = map.createPane("planePane");
       planePane.style.zIndex = "650";
+      planePane.style.pointerEvents = "none";
+    }
+
+    const popupPane = map.getPane("popupPane");
+    if (popupPane) {
+      popupPane.style.zIndex = "5000";
     }
   }, [map]);
 
@@ -66,9 +74,10 @@ export default function MapView({
   const [showWeatherStations, setShowWeatherStations] = useState(true);
   const [showPlanes, setShowPlanes] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyle>("standard");
+  const [isStyleOpen, setIsStyleOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={[46.151, 14.835]}
         zoom={9}
@@ -97,7 +106,7 @@ export default function MapView({
 
       <MapLegend />
 
-      <div className="absolute bottom-6 right-4 z-1000 flex gap-2">
+      <div className="absolute bottom-6 right-4 z-4000 flex gap-2 items-end">
         <LayerToggle
           label="Weather"
           active={showWeatherStations}
@@ -112,7 +121,20 @@ export default function MapView({
           activeColor="bg-yellow-300"
         />
 
-        <MapStyleToggle active={mapStyle} setActive={setMapStyle} />
+        <div className="relative flex flex-col items-center justify-end">
+          {isStyleOpen && (
+            <div className="absolute bottom-full right-0 mb-3 p-1.5 rounded-lg shadow-md border bg-white border-gray-100 flex flex-col gap-1 z-4001 min-w-25">
+              <MapStyleToggle active={mapStyle} setActive={setMapStyle} />
+            </div>
+          )}
+
+          <button 
+            onClick={() => setIsStyleOpen(!isStyleOpen)} 
+            className="rounded-full bg-white p-2 cursor-pointer transition-all flex items-center justify-center shadow-md active:scale-95"
+          >
+            <img src={mapLayers} alt="Map Style" className="w-5 h-5 object-contain"/>
+          </button>
+        </div>
       </div>
     </div>
   );
