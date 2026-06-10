@@ -334,7 +334,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex h-full">
+      <div className="flex h-full min-h-0 w-full relative overflow-hidden">
         {isSidebarOpen && (
           <Sidebar
             planes={filteredPlanes}
@@ -349,7 +349,7 @@ export default function Dashboard() {
 
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute top-1/2 left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
+          className="absolute top-[45%] left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
           style={{
             left: isSidebarOpen ? "320px" : "0px",
           }}

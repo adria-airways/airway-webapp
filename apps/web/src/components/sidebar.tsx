@@ -13,9 +13,7 @@ interface SidebarProps {
     planes: Planes[];
     tokenSnapshot: string | null;
     selectedPlane: string | null;
-    isOpen: boolean;
     isFilterOpen: boolean;
-    onClose: () => void;
     onSelect: (id: string) => void;
     onToggleFilter: () => void;
     onRouteLoaded: (hex: string, routeData: PlaneRoute) => void;
@@ -90,27 +88,20 @@ export default function Sidebar({
     planes, 
     tokenSnapshot, 
     selectedPlane, 
-    isOpen,
     isFilterOpen,
-    onClose,
     onSelect, 
     onToggleFilter,
     onRouteLoaded
 }: SidebarProps){
     return(
-        <div className={`absolute left-0 top-0 z-[1100] flex h-full w-[min(24rem,85vw)] flex-col bg-white/95 shadow-xl transition-transform duration-200 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
-            <div className="flex flex-row items-center justify-between gap-3 px-4 pt-4">
+        <div className="flex flex-col bg-white border-r-gray-300 w-sm">
+            <div className="flex flex-row justify-between px-4 pt-4">
                 <h2 className="mb-4 font-bold">Plane List</h2>
-                <div className="mb-4 flex items-center gap-2">
-                    <button type="button" onClick={onToggleFilter} className={`cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
-                        <img src={`${filterIcon}`}/>
-                    </button>
-                    <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-100">
-                        Close
-                    </button>
-                </div>
+                <button type="button" onClick={onToggleFilter} className={`mb-4 cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
+                    <img src={`${filterIcon}`}/>
+                </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+            <div className="bg-white border-r-gray-300 overflow-y-auto flex flex-col">
                 <div className="flex flex-col gap-2">
                     {planes.map((plane) => (
                         <SidebarCard 
