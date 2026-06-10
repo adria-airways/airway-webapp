@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "../global.css";
 
 import filterIcon from "../assets/filter.png"
+import locationIcon from "../assets/location.png"
 
 import {
     getPlaneRouteInfo,
@@ -17,6 +18,9 @@ interface SidebarProps {
     onSelect: (id: string) => void;
     onToggleFilter: () => void;
     onRouteLoaded: (hex: string, routeData: PlaneRoute) => void;
+    isLocationFilterActive: boolean;
+    onToggleLocationFilter: () => void;
+    hasLocation: boolean;
 }
 
 interface SidebarCardProps {
@@ -91,15 +95,35 @@ export default function Sidebar({
     isFilterOpen,
     onSelect, 
     onToggleFilter,
-    onRouteLoaded
+    onRouteLoaded,
+    isLocationFilterActive,
+    onToggleLocationFilter,
+    hasLocation
 }: SidebarProps){
     return(
         <div className="flex flex-col bg-white border-r-gray-300 w-sm">
             <div className="flex flex-row justify-between px-4 pt-4">
                 <h2 className="mb-4 font-bold">Plane List</h2>
-                <button type="button" onClick={onToggleFilter} className={`mb-4 cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
-                    <img src={`${filterIcon}`}/>
-                </button>
+                <div>
+                    <button
+                        type="button"
+                        disabled={!hasLocation}
+                        onClick={onToggleLocationFilter}
+                        title={hasLocation ? "My location (30km)" : "Waiting for GPS..."}
+                        className={`mb-4 cursor-pointer border-2 rounded-lg ${
+                            !hasLocation 
+                                ? "bg-gray-300 border-gray-500 text-gray-400 cursor-not-allowed" 
+                                : isLocationFilterActive 
+                                ? "border-blue-400 text-white" 
+                                : "border-gray-300"
+                        }`}
+                    >
+                        <img src={locationIcon} alt="Location"/>
+                    </button>
+                    <button type="button" onClick={onToggleFilter} className={`mb-4 cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
+                        <img src={`${filterIcon}`}/>
+                    </button>
+                </div>
             </div>
             <div className="bg-white border-r-gray-300 overflow-y-auto flex flex-col">
                 <div className="flex flex-col gap-2">

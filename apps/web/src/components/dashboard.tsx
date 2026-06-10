@@ -25,6 +25,22 @@ import { type FilterData } from "./filter";
 import closeSide from "../assets/closeSide.png"
 import openSide from "../assets/openSide.png"
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+      
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -44,6 +60,8 @@ export default function Dashboard() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [userLocation, setUserLocation] = useState<{lat: Number; lon: number} | null>(null);
+  const [isLocationFilterActive, setIsLocationFilterActive] = useState(false);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -207,6 +225,23 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
+  useEffect(() => {
+    if(!navigator.geolocation){
+      console.error("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({lat: position.coords.latitude, lon: position.coords.longitude});
+      },
+      (error) => {
+        console.error("Error retrieving geolocation:", error);
+      },
+      { enableHighAccuracy: true }
+    );
+  }, []);
+
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
   };
@@ -246,8 +281,20 @@ export default function Dashboard() {
   };
 
   const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+  const maxRadiusKm = 30;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
+    if(isLocationFilterActive && userLocation){
+      const userLat = userLocation.lat as number;
+      const userLon = userLocation.lon as number;
+      const planeLat = plane.latitude as number;
+      const planeLon = plane.longitude as number;
+
+      const distance = getDistanceKm(userLat, userLon, planeLat, planeLon);
+
+      if(distance > maxRadiusKm) return false;
+    }
+
     if (activeFilters.callsign) {
       const searchCallsign = activeFilters.callsign.toUpperCase().trim();
       if (!plane.callsign.toUpperCase().includes(searchCallsign)) return false;
@@ -291,6 +338,9 @@ export default function Dashboard() {
             onSelect={handleSelect}
             onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
             onRouteLoaded={handleRouteLoaded}
+            isLocationFilterActive={isLocationFilterActive}
+            onToggleLocationFilter={() => setIsLocationFilterActive(!isLocationFilterActive)}
+            hasLocation={!!userLocation}
           />
         )}
 
