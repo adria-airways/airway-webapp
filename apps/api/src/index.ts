@@ -16,8 +16,8 @@ app.listen(port, () => {
     console.error("[planes-cron] initial fetch failed:", error);
   });
 
-  //startCronjob();
-  //fetchWeatherData().catch((error) => {
-  //console.error("[weather-cron] initial fetch failed:", error);
-  //});
+  startCronjob();
+  fetchWeatherData().catch((error) => {
+    console.error("[weather-cron] initial fetch failed:", error);
+  });
 });
