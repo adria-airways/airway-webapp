@@ -378,6 +378,9 @@ export default function Dashboard() {
     setMode("live");
     setSelectedPlane(null);
     setSnapshotPlanes([]);
+    liveSnapshotPairKey.current = null;
+    setLiveSnapshotAnimation(null);
+    setAnimationNow(Date.now());
 
     if (snapshots.length > 0) {
       setSliderIndex(snapshots.length - 1);
