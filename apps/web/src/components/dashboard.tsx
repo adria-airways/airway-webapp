@@ -22,6 +22,9 @@ import {
 
 import { type FilterData } from "./filter";
 
+import closeSide from "../assets/closeSide.png"
+import openSide from "../assets/openSide.png"
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -40,7 +43,7 @@ export default function Dashboard() {
   const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
-  const [isPlanePanelOpen, setIsPlanePanelOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -242,11 +245,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleClosePlanePanel = () => {
-    setIsPlanePanelOpen(false);
-    setIsFilterOpen(false);
-  };
-
   const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
@@ -283,7 +281,35 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="flex h-full">
+        {isSidebarOpen && (
+          <Sidebar
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            isFilterOpen={isFilterOpen}
+            onSelect={handleSelect}
+            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+            onRouteLoaded={handleRouteLoaded}
+          />
+        )}
+
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute top-1/2 left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
+          style={{
+            left: isSidebarOpen ? "320px" : "0px"
+          }}
+        >
+          {isSidebarOpen ? <img src={closeSide} alt="Close list" className="w-6 h-6 object-contain"/> : <img src={openSide} alt="Open list" className="w-6 h-6 object-contain"/>}
+        </button>
+        
+        <Filter
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
+        />
         <MapView
           planes={filteredPlanes}
           tokenSnapshot={tokenSnapshot}
@@ -293,34 +319,6 @@ export default function Dashboard() {
               ? (snapshots[sliderIndex]?.snapshotTime ?? null)
               : null
           }
-        />
-
-        {!isPlanePanelOpen && (
-          <button
-            type="button"
-            onClick={() => setIsPlanePanelOpen(true)}
-            className="absolute left-3 top-32 z-[1200] rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow hover:bg-gray-100"
-          >
-            Planes
-          </button>
-        )}
-
-        <Sidebar
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          isOpen={isPlanePanelOpen}
-          isFilterOpen={isFilterOpen}
-          onClose={handleClosePlanePanel}
-          onSelect={handleSelect}
-          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-          onRouteLoaded={handleRouteLoaded}
-        />
-        <Filter
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          onApplyFilters={handleApplyFilters}
-          onResetFilters={handleResetFilters}
         />
       </div>
 
