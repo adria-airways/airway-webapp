@@ -2,7 +2,7 @@ import "../global.css";
 import { useAuth, UserButton, useUser } from "@clerk/clerk-react";
 import MapView from "./mapView";
 import "leaflet/dist/leaflet.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "./sidebar";
 import Filter from "./filter";
 import SnapshotTimeline from "./snapshotTimeline";
@@ -21,6 +21,44 @@ import {
 } from "../lib/planeApi";
 
 import { type FilterData } from "./filter";
+
+const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
+
+type LiveSnapshotAnimation = {
+  from: Planes[];
+  to: Planes[];
+  fromTime: string;
+  toTime: string;
+};
+
+function getSnapshotAnimationDuration(fromTime: string, toTime: string) {
+  const duration = new Date(toTime).getTime() - new Date(fromTime).getTime();
+  return duration > 0 ? duration : SNAPSHOT_ANIMATION_FALLBACK_MS;
+}
+
+function interpolatePlanes(
+  fromPlanes: Planes[],
+  toPlanes: Planes[],
+  progress: number,
+) {
+  const targetByHex = new Map(toPlanes.map((plane) => [plane.hex, plane]));
+
+  return fromPlanes.map((plane) => {
+    const target = targetByHex.get(plane.hex);
+
+    if (!target) return plane;
+
+    return {
+      ...plane,
+      latitude:
+        plane.latitude + (target.latitude - plane.latitude) * progress,
+      longitude:
+        plane.longitude + (target.longitude - plane.longitude) * progress,
+      heading: target.heading,
+      groundSpeed: target.groundSpeed,
+    };
+  });
+}
 
 export default function Dashboard() {
   const { getToken } = useAuth();
@@ -41,6 +79,9 @@ export default function Dashboard() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [isPlanePanelOpen, setIsPlanePanelOpen] = useState(false);
+  const [liveSnapshotAnimation, setLiveSnapshotAnimation] =
+    useState<LiveSnapshotAnimation | null>(null);
+  const [animationNow, setAnimationNow] = useState(() => Date.now());
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -114,7 +155,7 @@ export default function Dashboard() {
 
         setSnapshots(sortedSnapshots);
 
-        if (sortedSnapshots.length > 0) {
+        if (mode === "live" && sortedSnapshots.length > 0) {
           setSliderIndex(sortedSnapshots.length - 1);
         }
       } catch (error) {
@@ -123,11 +164,52 @@ export default function Dashboard() {
     }
 
     fetchSnapshots();
+    const interval = window.setInterval(fetchSnapshots, 30000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [getToken]);
+  }, [getToken, mode]);
+
+  useEffect(() => {
+    if (mode !== "live" || !tokenSnapshot || snapshots.length < 2) return;
+
+    const controller = new AbortController();
+    const fromSnapshot = snapshots[snapshots.length - 2];
+    const toSnapshot = snapshots[snapshots.length - 1];
+    const token = tokenSnapshot;
+
+    if (!fromSnapshot || !toSnapshot) return;
+
+    async function loadLiveSnapshotAnimation() {
+      try {
+        const [from, to] = await Promise.all([
+          loadSnapshotPlanes(token, fromSnapshot, controller.signal),
+          loadSnapshotPlanes(token, toSnapshot, controller.signal),
+        ]);
+
+        setLiveSnapshotAnimation({
+          from,
+          to,
+          fromTime: fromSnapshot.snapshotTime,
+          toTime: toSnapshot.snapshotTime,
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error("Failed loading live snapshot animation:", error);
+      }
+    }
+
+    void loadLiveSnapshotAnimation();
+
+    return () => {
+      controller.abort();
+    };
+  }, [loadSnapshotPlanes, mode, snapshots, tokenSnapshot]);
 
   useEffect(() => {
     if (mode !== "history") return;
@@ -204,6 +286,18 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
+  useEffect(() => {
+    if (mode !== "live" || !liveSnapshotAnimation) return;
+
+    const interval = window.setInterval(() => {
+      setAnimationNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [liveSnapshotAnimation, mode]);
+
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
   };
@@ -247,7 +341,28 @@ export default function Dashboard() {
     setIsFilterOpen(false);
   };
 
-  const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
+  const animatedLivePlanes = useMemo(() => {
+    if (!liveSnapshotAnimation) return planes;
+
+    const duration = getSnapshotAnimationDuration(
+      liveSnapshotAnimation.fromTime,
+      liveSnapshotAnimation.toTime,
+    );
+    const animationStart = new Date(liveSnapshotAnimation.toTime).getTime();
+    const progress = Math.min(
+      Math.max((animationNow - animationStart) / duration, 0),
+      1,
+    );
+
+    return interpolatePlanes(
+      liveSnapshotAnimation.from,
+      liveSnapshotAnimation.to,
+      progress,
+    );
+  }, [animationNow, liveSnapshotAnimation, planes]);
+
+  const visiblePlanes =
+    mode === "history" ? snapshotPlanes : animatedLivePlanes;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
     if (activeFilters.callsign) {
