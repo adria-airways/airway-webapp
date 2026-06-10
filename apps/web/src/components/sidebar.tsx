@@ -13,7 +13,9 @@ interface SidebarProps {
     planes: Planes[];
     tokenSnapshot: string | null;
     selectedPlane: string | null;
+    isOpen: boolean;
     isFilterOpen: boolean;
+    onClose: () => void;
     onSelect: (id: string) => void;
     onToggleFilter: () => void;
     onRouteLoaded: (hex: string, routeData: PlaneRoute) => void;
@@ -32,29 +34,46 @@ function SidebarCard({plane, token, isSelected, onClick, onRouteLoaded}: Sidebar
     const [loading, setLoading] = useState(false);
     
     useEffect(() => {
+        let cancelled = false;
         const normalizedCallsign = plane.callsign?.toUpperCase().trim();
 
         if (route || loading) return;
 
-        if(!token || !normalizedCallsign || normalizedCallsign == "UNKNOWN") return;
+        if(!token || !normalizedCallsign || normalizedCallsign === "UNKNOWN") return;
 
-        setLoading(true);
-        getPlaneRouteInfo(token, plane.hex, plane.callsign)
-            .then((res) => {
-                const rawData = res && typeof res === "object" && "data" in res
-                    ? (res as any).data
+        const routeToken = token;
+
+        async function loadRoute() {
+            setLoading(true);
+
+            try {
+                const res = await getPlaneRouteInfo(
+                    routeToken,
+                    plane.hex,
+                    plane.callsign,
+                ) as unknown;
+                const rawData: unknown = res && typeof res === "object" && "data" in res
+                    ? (res as { data?: unknown }).data
                     : res;
 
-                const cleanRoute = Array.isArray(rawData) ? rawData[0] : rawData;
+                const cleanRoute = (Array.isArray(rawData) ? rawData[0] : rawData) as PlaneRoute | undefined;
+
+                if (cancelled || !cleanRoute) return;
 
                 setRoute(cleanRoute);
+                onRouteLoaded(plane.hex, cleanRoute);
+            } catch (err) {
+                console.error("Error fetching card route:", err);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
 
-                if(cleanRoute){
-                    onRouteLoaded(plane.hex, cleanRoute);
-                }
-            })
-            .catch((err) => console.error("Error fetching card route:", err))
-            .finally(() => setLoading(false));
+        void loadRoute();
+
+        return () => {
+            cancelled = true;
+        };
     }, [plane.hex, plane.callsign, token, onRouteLoaded, route, loading]);
 
     return (
@@ -71,20 +90,27 @@ export default function Sidebar({
     planes, 
     tokenSnapshot, 
     selectedPlane, 
+    isOpen,
     isFilterOpen,
+    onClose,
     onSelect, 
     onToggleFilter,
     onRouteLoaded
 }: SidebarProps){
     return(
-        <div className="flex flex-col bg-white border-r-gray-300 w-sm">
-            <div className="flex flex-row justify-between px-4 pt-4">
+        <div className={`absolute left-0 top-0 z-[1100] flex h-full w-[min(24rem,85vw)] flex-col bg-white/95 shadow-xl transition-transform duration-200 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <div className="flex flex-row items-center justify-between gap-3 px-4 pt-4">
                 <h2 className="mb-4 font-bold">Plane List</h2>
-                <button type="button" onClick={onToggleFilter} className={`mb-4 cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
-                    <img src={`${filterIcon}`}/>
-                </button>
+                <div className="mb-4 flex items-center gap-2">
+                    <button type="button" onClick={onToggleFilter} className={`cursor-pointer border-2 rounded-lg ${isFilterOpen ? "border-blue-400" : "border-gray-300"}`}>
+                        <img src={`${filterIcon}`}/>
+                    </button>
+                    <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-100">
+                        Close
+                    </button>
+                </div>
             </div>
-            <div className="bg-white border-r-gray-300 overflow-y-auto flex flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
                 <div className="flex flex-col gap-2">
                     {planes.map((plane) => (
                         <SidebarCard 
