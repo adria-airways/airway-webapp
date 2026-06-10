@@ -131,6 +131,16 @@ export default function PlaneMap({
     // Prevent re-zooming
     const lastFlownTo = useRef<string | null>(null);
 
+    useEffect(() => {
+        map.invalidateSize();
+
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+        }, 200);
+
+        return () => clearTimeout(timer);
+    }, [planes, map]);
+
     // Pan to selected plane
     useEffect(() => {
         if(!selectedPlane){
