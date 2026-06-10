@@ -7,6 +7,11 @@ export interface Planes {
   originCountry: string;
   heading: number;
   groundSpeed: number;
+  airline?: string | null;
+  flyingFromCity?: string | null;
+  flyingFromCountry?: string | null;
+  flyingToCity?: string | null;
+  flyingToCountry?: string | null;
 }
 
 export interface PlaneRoute {

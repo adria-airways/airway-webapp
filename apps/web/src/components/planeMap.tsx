@@ -18,6 +18,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
   const { hex, longitude, latitude, callsign, heading, originCountry } = plane;
   const [route, setRoute] = useState<PlaneRoute | null>(null);
   const [loading, setLoading] = useState(false);
+  const displayRoute = route ?? plane;
 
   const angle = heading ?? 0;
 
@@ -41,7 +42,7 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
   });
 
   const fetchRouteDetails = async () => {
-    if (route || loading || !callsign) return;
+    if (route || plane.airline || loading || !callsign) return;
 
     setLoading(true);
     try {
@@ -78,21 +79,21 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
             </p>
           )}
 
-          {!loading && route ? (
+          {!loading && displayRoute.airline ? (
             <div>
-                {!loading && route.airline ? (
+                {!loading && displayRoute.airline ? (
                     <div>
-                        <p className="text-center">{route.airline || "Unknown Airline"}</p>
+                        <p className="text-center">{displayRoute.airline || "Unknown Airline"}</p>
                     </div>
                 ) : null}
                 
                 <div className="text-center">
                     <p className="text-blue-600 font-medium">
-                      {route.flyingFromCountry || "Unknown"}, {route.flyingFromCity || "Unknown"}
+                      {displayRoute.flyingFromCountry || "Unknown"}, {displayRoute.flyingFromCity || "Unknown"}
                     </p>
                     <p className="m-2">↓</p>
                     <p className="text-blue-600 font-medium">
-                      {route.flyingToCountry || "Unknown"}, {route.flyingToCity || "Unknown"}
+                      {displayRoute.flyingToCountry || "Unknown"}, {displayRoute.flyingToCity || "Unknown"}
                     </p>
                 </div>
             </div>

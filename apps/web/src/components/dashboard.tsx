@@ -398,11 +398,25 @@ export default function Dashboard() {
       1,
     );
 
+    const routeByHex = new Map(planes.map((plane) => [plane.hex, plane]));
+
     return interpolatePlanes(
       liveSnapshotAnimation.from,
       liveSnapshotAnimation.to,
       progress,
-    );
+    ).map((plane) => {
+      const livePlane = routeByHex.get(plane.hex);
+
+      return {
+        ...plane,
+        airline: livePlane?.airline ?? plane.airline,
+        flyingFromCity: livePlane?.flyingFromCity ?? plane.flyingFromCity,
+        flyingFromCountry:
+          livePlane?.flyingFromCountry ?? plane.flyingFromCountry,
+        flyingToCity: livePlane?.flyingToCity ?? plane.flyingToCity,
+        flyingToCountry: livePlane?.flyingToCountry ?? plane.flyingToCountry,
+      };
+    });
   }, [animationNow, liveSnapshotAnimation, planes]);
 
   // Choose Dataset Basis according to Screen state mode
@@ -428,11 +442,11 @@ export default function Dashboard() {
 
     if (activeFilters.airline) {
       const cachedRoute = routeCache[plane.hex];
-      if (!cachedRoute || !cachedRoute.airline) return false;
+      const airline = plane.airline ?? cachedRoute?.airline;
+      if (!airline) return false;
 
       const searchAirline = activeFilters.airline.toLowerCase().trim();
-      if (!cachedRoute.airline.toLowerCase().includes(searchAirline))
-        return false;
+      if (!airline.toLowerCase().includes(searchAirline)) return false;
     }
 
     return true;
