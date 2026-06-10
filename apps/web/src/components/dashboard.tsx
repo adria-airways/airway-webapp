@@ -22,6 +22,9 @@ import {
 
 import { type FilterData } from "./filter";
 
+import closeSide from "../assets/closeSide.png"
+import openSide from "../assets/openSide.png"
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -40,6 +43,7 @@ export default function Dashboard() {
   const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -276,15 +280,28 @@ export default function Dashboard() {
       </header>
 
       <div className="flex h-full">
-        <Sidebar
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          isFilterOpen={isFilterOpen}
-          onSelect={handleSelect}
-          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-          onRouteLoaded={handleRouteLoaded}
-        />
+        {isSidebarOpen && (
+          <Sidebar
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            isFilterOpen={isFilterOpen}
+            onSelect={handleSelect}
+            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+            onRouteLoaded={handleRouteLoaded}
+          />
+        )}
+
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute top-1/2 left-0 h-20 z-1000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
+          style={{
+            left: isSidebarOpen ? "320px" : "0px"
+          }}
+        >
+          {isSidebarOpen ? <img src={closeSide} alt="Close list" className="w-6 h-6 object-contain"/> : <img src={openSide} alt="Open list" className="w-6 h-6 object-contain"/>}
+        </button>
+        
         <Filter
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
