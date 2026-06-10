@@ -8,8 +8,9 @@ const OPENSKY_TOKEN_URL =
   "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 const HTTP_TIMEOUT_MS = 10_000;
 const STEP_TIMEOUT_MS = 25_000;
-const HISTORY_SNAPSHOT_INTERVAL_MS =
-  Number(process.env.PLANE_HISTORY_SNAPSHOT_INTERVAL_MS ?? 300_000);
+const HISTORY_SNAPSHOT_INTERVAL_MS = Number(
+  process.env.PLANE_HISTORY_SNAPSHOT_INTERVAL_MS ?? 300_000,
+);
 const DB_TIMEOUT_MS = 15_000;
 
 let isFetchingPlanes = false;
@@ -46,7 +47,9 @@ async function withTimeout<T>(
       promise,
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => {
-          reject(new Error(`[planes-cron] ${label} timed out after ${timeoutMs}ms`));
+          reject(
+            new Error(`[planes-cron] ${label} timed out after ${timeoutMs}ms`),
+          );
         }, timeoutMs);
       }),
     ]);
@@ -301,7 +304,10 @@ async function fetchPlaneData() {
 
       if (routeRows.rowsWithRouteData.length > 0) {
         await withTimeout(
-          db.insert(planeRoutes).values(routeRows.rowsWithRouteData).onConflictDoNothing(),
+          db
+            .insert(planeRoutes)
+            .values(routeRows.rowsWithRouteData)
+            .onConflictDoNothing(),
           "plane_routes insert",
           DB_TIMEOUT_MS,
         );
@@ -360,7 +366,7 @@ async function fetchPlaneData() {
 }
 
 export function startPlanesCronjob() {
-  cron.schedule("*/30 * * * * *", runPlaneCron);
+  cron.schedule("3 * * * * *", runPlaneCron);
 }
 
 function runPlaneCron() {
