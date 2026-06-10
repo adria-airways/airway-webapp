@@ -68,7 +68,7 @@ export default function MapView({
   const [mapStyle, setMapStyle] = useState<MapStyle>("standard");
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={[46.151, 14.835]}
         zoom={9}
@@ -97,7 +97,7 @@ export default function MapView({
 
       <MapLegend />
 
-      <div className="absolute bottom-6 right-4 z-1000 flex gap-2">
+      <div className="absolute bottom-6 right-4 z-[1000] flex flex-col items-end gap-2 sm:flex-row">
         <LayerToggle
           label="Weather"
           active={showWeatherStations}

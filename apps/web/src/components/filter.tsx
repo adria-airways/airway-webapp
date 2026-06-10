@@ -13,7 +13,7 @@ export interface FilterData {
     airline: string;
 }
 
-export default function Filter({ isOpen, onApplyFilters, onResetFilters }: FilterProps){
+export default function Filter({ isOpen, onClose, onApplyFilters, onResetFilters }: FilterProps){
     const [localFilters, setLocalFilters] = useState<FilterData>({
         callsign: "",
         airline: ""
@@ -40,9 +40,12 @@ export default function Filter({ isOpen, onApplyFilters, onResetFilters }: Filte
     };
 
     return(
-        <div className="absolute top-18 left-80 z-2000 w-72 h-80 bg-white border border-gray-200 p-4 transition-all animate-in slide-in-from-left-4 duration-200">
+        <div className="absolute left-4 top-20 z-[1300] h-80 w-[calc(100vw-2rem)] max-w-72 bg-white border border-gray-200 p-4 shadow-lg transition-all animate-in slide-in-from-left-4 duration-200">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-bold text-gray-800">Filter Planes</h3>
+                <button type="button" onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800">
+                    Close
+                </button>
             </div>
 
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between">

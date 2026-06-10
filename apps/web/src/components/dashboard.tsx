@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [isPlanePanelOpen, setIsPlanePanelOpen] = useState(false);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
 
@@ -183,15 +184,17 @@ export default function Dashboard() {
           continue;
         }
 
-        await loadSnapshotPlanes(tokenSnapshot, snapshot, controller.signal).catch(
-          (error) => {
-            if (error instanceof DOMException && error.name === "AbortError") {
-              return;
-            }
+        await loadSnapshotPlanes(
+          tokenSnapshot,
+          snapshot,
+          controller.signal,
+        ).catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
 
-            console.error("Failed prefetching snapshot planes:", error);
-          },
-        );
+          console.error("Failed prefetching snapshot planes:", error);
+        });
       }
     }, 500);
 
@@ -239,6 +242,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleClosePlanePanel = () => {
+    setIsPlanePanelOpen(false);
+    setIsFilterOpen(false);
+  };
+
   const visiblePlanes = mode === "history" ? snapshotPlanes : planes;
 
   const filteredPlanes = visiblePlanes.filter((plane) => {
@@ -275,22 +283,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex h-full">
-        <Sidebar
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          isFilterOpen={isFilterOpen}
-          onSelect={handleSelect}
-          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-          onRouteLoaded={handleRouteLoaded}
-        />
-        <Filter
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          onApplyFilters={handleApplyFilters}
-          onResetFilters={handleResetFilters}
-        />
+      <div className="relative flex-1 overflow-hidden">
         <MapView
           planes={filteredPlanes}
           tokenSnapshot={tokenSnapshot}
@@ -300,6 +293,34 @@ export default function Dashboard() {
               ? (snapshots[sliderIndex]?.snapshotTime ?? null)
               : null
           }
+        />
+
+        {!isPlanePanelOpen && (
+          <button
+            type="button"
+            onClick={() => setIsPlanePanelOpen(true)}
+            className="absolute left-3 top-32 z-[1200] rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow hover:bg-gray-100"
+          >
+            Planes
+          </button>
+        )}
+
+        <Sidebar
+          planes={filteredPlanes}
+          tokenSnapshot={tokenSnapshot}
+          selectedPlane={selectedPlane}
+          isOpen={isPlanePanelOpen}
+          isFilterOpen={isFilterOpen}
+          onClose={handleClosePlanePanel}
+          onSelect={handleSelect}
+          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+          onRouteLoaded={handleRouteLoaded}
+        />
+        <Filter
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
         />
       </div>
 

@@ -20,7 +20,7 @@ export default function SnapshotTimeline({
   const selectedSnapshot = snapshots[sliderIndex] ?? null;
 
   return (
-    <div className="absolute bottom-16 left-1/2 z-1000 w-[min(520px,calc(100vw-9rem))] -translate-x-1/2 bg-white/95 border border-gray-200 shadow-lg rounded-lg px-4 py-3">
+    <div className="absolute bottom-16 left-1/2 z-[1000] w-[calc(100vw-2rem)] max-w-[520px] -translate-x-1/2 bg-white/95 border border-gray-200 shadow-lg rounded-lg px-4 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-gray-900">
