@@ -29,6 +29,8 @@ const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
 const SNAPSHOT_ANIMATION_TICK_MS = 100;
 
 type LiveSnapshotAnimation = {
+  fromId: number;
+  toId: number;
   from: Planes[];
   to: Planes[];
   fromTime: string;
@@ -112,6 +114,7 @@ export default function Dashboard() {
   const [snapshotPlanes, setSnapshotPlanes] = useState<Planes[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [committedSnapshotIndex, setCommittedSnapshotIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Resolved State from Conflict Branches
@@ -121,6 +124,7 @@ export default function Dashboard() {
   const [isLocationFilterActive, setIsLocationFilterActive] = useState(false);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
+  const liveSnapshotPairKey = useRef<string | null>(null);
   const maxRadiusKm = 30;
 
   const loadSnapshotPlanes = useCallback(
@@ -197,6 +201,7 @@ export default function Dashboard() {
 
         if (mode === "live" && sortedSnapshots.length > 0) {
           setSliderIndex(sortedSnapshots.length - 1);
+          setCommittedSnapshotIndex(sortedSnapshots.length - 1);
         }
       } catch (error) {
         console.error("Failed loading snapshots:", error);
@@ -223,6 +228,9 @@ export default function Dashboard() {
 
     if (!fromSnapshot || !toSnapshot) return;
 
+    const pairKey = `${fromSnapshot.id}:${toSnapshot.id}`;
+    if (liveSnapshotPairKey.current === pairKey) return;
+
     async function loadLiveSnapshotAnimation() {
       try {
         const [from, to] = await Promise.all([
@@ -230,7 +238,10 @@ export default function Dashboard() {
           loadSnapshotPlanes(token, toSnapshot, controller.signal),
         ]);
 
+        liveSnapshotPairKey.current = pairKey;
         setLiveSnapshotAnimation({
+          fromId: fromSnapshot.id,
+          toId: toSnapshot.id,
           from,
           to,
           fromTime: fromSnapshot.snapshotTime,
@@ -257,7 +268,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (mode !== "history") return;
 
-    const snapshot = snapshots[sliderIndex];
+    const snapshot = snapshots[committedSnapshotIndex];
     if (!snapshot || !tokenSnapshot) return;
 
     const controller = new AbortController();
@@ -290,47 +301,13 @@ export default function Dashboard() {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
-
-  // Historic Neighbors Prefetcher Loop
-  useEffect(() => {
-    if (mode !== "history" || !tokenSnapshot) return;
-
-    const controller = new AbortController();
-
-    const timeout = window.setTimeout(async () => {
-      const neighborIndexes = [sliderIndex - 1, sliderIndex + 1].filter(
-        (index) => index >= 0 && index < snapshots.length,
-      );
-
-      for (const index of neighborIndexes) {
-        if (controller.signal.aborted) break;
-
-        const snapshot = snapshots[index];
-
-        if (!snapshot || snapshotPlaneCache.current[snapshot.id]) {
-          continue;
-        }
-
-        await loadSnapshotPlanes(
-          tokenSnapshot,
-          snapshot,
-          controller.signal,
-        ).catch((error) => {
-          if (error instanceof DOMException && error.name === "AbortError") {
-            return;
-          }
-
-          console.error("Failed prefetching snapshot planes:", error);
-        });
-      }
-    }, 500);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeout);
-    };
-  }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
+  }, [
+    committedSnapshotIndex,
+    loadSnapshotPlanes,
+    mode,
+    snapshots,
+    tokenSnapshot,
+  ]);
 
   // Live Interpolation Clock Tick Tracker
   useEffect(() => {
@@ -391,6 +368,12 @@ export default function Dashboard() {
     setSelectedPlane(null);
   };
 
+  const handleCommitSnapshotIndex = (index: number) => {
+    setMode("history");
+    setCommittedSnapshotIndex(index);
+    setSelectedPlane(null);
+  };
+
   const handleReturnLive = () => {
     setMode("live");
     setSelectedPlane(null);
@@ -398,6 +381,7 @@ export default function Dashboard() {
 
     if (snapshots.length > 0) {
       setSliderIndex(snapshots.length - 1);
+      setCommittedSnapshotIndex(snapshots.length - 1);
     }
   };
 
@@ -530,6 +514,7 @@ export default function Dashboard() {
         mode={mode}
         loading={snapshotLoading}
         onChangeIndex={handleChangeSnapshotIndex}
+        onCommitIndex={handleCommitSnapshotIndex}
         onReturnLive={handleReturnLive}
       />
 
