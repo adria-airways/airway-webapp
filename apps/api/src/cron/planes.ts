@@ -366,7 +366,7 @@ async function fetchPlaneData() {
 }
 
 export function startPlanesCronjob() {
-  cron.schedule("3 * * * * *", runPlaneCron);
+  cron.schedule("0 */3 * * * *", runPlaneCron);
 }
 
 function runPlaneCron() {
