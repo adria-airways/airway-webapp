@@ -78,6 +78,22 @@ function interpolatePlanes(
   });
 }
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+      
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export default function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -97,11 +113,15 @@ export default function Dashboard() {
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [liveSnapshotAnimation, setLiveSnapshotAnimation] =
-    useState<LiveSnapshotAnimation | null>(null);
+  
+  // Resolved State from Conflict Branches
+  const [liveSnapshotAnimation, setLiveSnapshotAnimation] = useState<LiveSnapshotAnimation | null>(null);
   const [animationNow, setAnimationNow] = useState(() => Date.now());
+  const [userLocation, setUserLocation] = useState<{lat: number; lon: number} | null>(null);
+  const [isLocationFilterActive, setIsLocationFilterActive] = useState(false);
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
+  const maxRadiusKm = 30;
 
   const loadSnapshotPlanes = useCallback(
     async (token: string, snapshot: Snapshot, signal?: AbortSignal) => {
@@ -123,6 +143,7 @@ export default function Dashboard() {
     [],
   );
 
+  // Poll for Live Planes
   useEffect(() => {
     let cancelled = false;
 
@@ -154,6 +175,7 @@ export default function Dashboard() {
     };
   }, [getToken, mode]);
 
+  // Load Timelines/Snapshots
   useEffect(() => {
     let cancelled = false;
 
@@ -190,6 +212,7 @@ export default function Dashboard() {
     };
   }, [getToken, mode]);
 
+  // Handle Animation Pre-loading
   useEffect(() => {
     if (mode !== "live" || !tokenSnapshot || snapshots.length < 2) return;
 
@@ -230,6 +253,7 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, tokenSnapshot]);
 
+  // Historic Playback Core
   useEffect(() => {
     if (mode !== "history") return;
 
@@ -256,7 +280,9 @@ export default function Dashboard() {
         console.error("Failed loading snapshot planes:", error);
         setSnapshotPlanes([]);
       } finally {
-        setSnapshotLoading(false);
+        if (!controller.signal.aborted) {
+          setSnapshotLoading(false);
+        }
       }
     }, 250);
 
@@ -266,6 +292,7 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
+  // Historic Neighbors Prefetcher Loop
   useEffect(() => {
     if (mode !== "history" || !tokenSnapshot) return;
 
@@ -305,6 +332,7 @@ export default function Dashboard() {
     };
   }, [loadSnapshotPlanes, mode, snapshots, sliderIndex, tokenSnapshot]);
 
+  // Live Interpolation Clock Tick Tracker
   useEffect(() => {
     if (mode !== "live" || !liveSnapshotAnimation) return;
 
@@ -316,6 +344,24 @@ export default function Dashboard() {
       window.clearInterval(interval);
     };
   }, [liveSnapshotAnimation, mode]);
+
+  // Geolocation Mount Handler Tracker
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
+      },
+      (error) => {
+        console.error("Error retrieving geolocation:", error);
+      },
+      { enableHighAccuracy: true }
+    );
+  }, []);
 
   const handleSelect = (hex: string) => {
     setSelectedPlane(hex);
@@ -355,6 +401,7 @@ export default function Dashboard() {
     }
   };
 
+  // Interpolated Flight Calculations
   const animatedLivePlanes = useMemo(() => {
     if (!liveSnapshotAnimation) return planes;
 
@@ -374,10 +421,22 @@ export default function Dashboard() {
     );
   }, [animationNow, liveSnapshotAnimation, planes]);
 
-  const visiblePlanes =
-    mode === "history" ? snapshotPlanes : animatedLivePlanes;
+  // Choose Dataset Basis according to Screen state mode
+  const visiblePlanes = mode === "history" ? snapshotPlanes : animatedLivePlanes;
 
+  // Process Dataset Calculations down past location bounds thresholds
   const filteredPlanes = visiblePlanes.filter((plane) => {
+    if (isLocationFilterActive && userLocation) {
+      const userLat = userLocation.lat as number;
+      const userLon = userLocation.lon as number;
+      const planeLat = plane.latitude as number;
+      const planeLon = plane.longitude as number;
+
+      const distance = getDistanceKm(userLat, userLon, planeLat, planeLon);
+
+      if (distance > maxRadiusKm) return false;
+    }
+
     if (activeFilters.callsign) {
       const searchCallsign = activeFilters.callsign.toUpperCase().trim();
       if (!plane.callsign.toUpperCase().includes(searchCallsign)) return false;
@@ -411,57 +470,58 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <MapView
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          weatherTime={
-            mode === "history"
-              ? (snapshots[sliderIndex]?.snapshotTime ?? null)
-              : null
-          }
-        />
+      <div className="flex flex-1 h-full min-h-0 w-full relative overflow-hidden">
+        
+        {isSidebarOpen && (
+          <Sidebar
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            isOpen={isSidebarOpen}
+            isFilterOpen={isFilterOpen}
+            onSelect={handleSelect}
+            onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
+            onRouteLoaded={handleRouteLoaded}
+            isLocationFilterActive={isLocationFilterActive}
+            onToggleLocationFilter={() => setIsLocationFilterActive(!isLocationFilterActive)}
+            hasLocation={!!userLocation}
+          />
+        )}
 
-        <Sidebar
-          planes={filteredPlanes}
-          tokenSnapshot={tokenSnapshot}
-          selectedPlane={selectedPlane}
-          isOpen={isSidebarOpen}
-          isFilterOpen={isFilterOpen}
-          onSelect={handleSelect}
-          onToggleFilter={() => setIsFilterOpen(!isFilterOpen)}
-          onRouteLoaded={handleRouteLoaded}
-        />
+       <div className="flex-1 h-full min-w-0 relative overflow-hidden">
+          
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-[45%] h-20 z-5000 bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm cursor-pointer"
+            style={{
+              left: isSidebarOpen ? "384px" : "0px",
+            }}
+          >
+            {isSidebarOpen ? (
+              <img src={closeSide} alt="Close list" className="w-6 h-6 object-contain"/>
+            ) : (
+              <img src={openSide} alt="Open list" className="w-6 h-6 object-contain"/>
+            )}
+          </button>
+          
+          <Filter
+            isOpen={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            onApplyFilters={handleApplyFilters}
+            onResetFilters={handleResetFilters}
+          />
 
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute top-[45%] h-20 z-[1200] bg-white text-gray-800 p-2 rounded-tr-md rounded-br-md border-t border-r border-b border-gray-300 hover:bg-gray-100 transition-all font-medium text-sm"
-          style={{
-            left: isSidebarOpen ? "min(24rem, 85vw)" : "0px",
-          }}
-        >
-          {isSidebarOpen ? (
-            <img
-              src={closeSide}
-              alt="Close list"
-              className="w-6 h-6 object-contain"
-            />
-          ) : (
-            <img
-              src={openSide}
-              alt="Open list"
-              className="w-6 h-6 object-contain"
-            />
-          )}
-        </button>
-
-        <Filter
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          onApplyFilters={handleApplyFilters}
-          onResetFilters={handleResetFilters}
-        />
+          <MapView
+            planes={filteredPlanes}
+            tokenSnapshot={tokenSnapshot}
+            selectedPlane={selectedPlane}
+            weatherTime={
+              mode === "history"
+                ? (snapshots[sliderIndex]?.snapshotTime ?? null)
+                : null
+            }
+          />
+        </div>
       </div>
 
       <SnapshotTimeline
