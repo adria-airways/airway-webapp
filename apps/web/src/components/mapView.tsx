@@ -41,13 +41,19 @@ function PaneInitializer() {
   useEffect(() => {
     if (!map.getPane("weatherPane")) {
       const weatherPane = map.createPane("weatherPane");
-      weatherPane.style.zIndex = "450";
+      weatherPane.style.zIndex = "625";
       weatherPane.style.pointerEvents = "none";
     }
 
     if (!map.getPane("planePane")) {
       const planePane = map.createPane("planePane");
       planePane.style.zIndex = "650";
+      planePane.style.pointerEvents = "none";
+    }
+
+    const popupPane = map.getPane("popupPane");
+    if (popupPane) {
+      popupPane.style.zIndex = "5000";
     }
   }, [map]);
 

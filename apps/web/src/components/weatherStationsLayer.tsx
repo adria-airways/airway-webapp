@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Marker, Popup } from "react-leaflet";
 import { useAuth } from "@clerk/clerk-react";
 import L from "leaflet";
@@ -42,7 +42,7 @@ function createWeatherStationIcon(reading?: WeatherReading | null) {
             : ""
         }
       </div>`,
-    className: "bg-transparent border-none",
+    className: "airway-weather-marker bg-transparent border-none",
     iconSize: temperature ? [52, 24] : [24, 24],
     iconAnchor: temperature ? [26, 12] : [12, 12],
     popupAnchor: [0, -12],
@@ -230,7 +230,7 @@ function ForecastWeatherDetails({
   );
 }
 
-export default function WeatherStationsLayer({
+function WeatherStationsLayer({
   visible,
   weatherTime,
 }: {
@@ -410,3 +410,5 @@ export default function WeatherStationsLayer({
     </>
   );
 }
+
+export default memo(WeatherStationsLayer);

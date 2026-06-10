@@ -22,24 +22,28 @@ function LivePlaneMarker({ plane, token }: { plane: Planes; token: string }) {
 
   const angle = heading ?? 0;
 
-  const dynamicIcon = L.divIcon({
-    html: `<div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-      <img src="${planeIcon}"
-        style="
-          transform: rotate(${angle}deg);
-          width: 32px; height: 32px;
-          display: block;
-          filter: drop-shadow(1px 0 0 black)
-                  drop-shadow(-1px 0 0 black)
-                  drop-shadow(0 1px 0 black)
-                  drop-shadow(0 -1px 0 black);
-        " />
-    </div>`,
-    className: "bg-transparent border-none",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-  });
+  const dynamicIcon = useMemo(
+    () =>
+      L.divIcon({
+        html: `<div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+          <img src="${planeIcon}"
+            style="
+              transform: rotate(${angle}deg);
+              width: 32px; height: 32px;
+              display: block;
+              filter: drop-shadow(1px 0 0 black)
+                      drop-shadow(-1px 0 0 black)
+                      drop-shadow(0 1px 0 black)
+                      drop-shadow(0 -1px 0 black);
+            " />
+        </div>`,
+        className: "airway-plane-marker bg-transparent border-none",
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16],
+      }),
+    [angle],
+  );
 
   const fetchRouteDetails = async () => {
     if (route || plane.airline || loading || !callsign) return;
