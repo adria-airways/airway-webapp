@@ -37,7 +37,7 @@ function SidebarCard({plane, token, isSelected, onClick, onRouteLoaded}: Sidebar
         let cancelled = false;
         const normalizedCallsign = plane.callsign?.toUpperCase().trim();
 
-        if (route || loading) return;
+        if (route) return;
 
         if(!token || !normalizedCallsign || normalizedCallsign === "UNKNOWN") return;
 
@@ -74,7 +74,7 @@ function SidebarCard({plane, token, isSelected, onClick, onRouteLoaded}: Sidebar
         return () => {
             cancelled = true;
         };
-    }, [plane.hex, plane.callsign, token, onRouteLoaded, route, loading]);
+    }, [plane.hex, plane.callsign, token, onRouteLoaded, route]);
 
     return (
         <div onClick={onClick} className={`border p-3 cursor-pointer rounded-lg transition-all duration-150 ${isSelected ? "bg-blue-50/80 border-blue-400 shadow-sm" : "bg-white border-gray-200 hover:bg-gray-50"}`}>
