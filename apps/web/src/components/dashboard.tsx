@@ -26,17 +26,32 @@ import closeSide from "../assets/closeSide.png";
 import openSide from "../assets/openSide.png";
 
 const SNAPSHOT_ANIMATION_FALLBACK_MS = 180000;
+const SNAPSHOT_ANIMATION_TICK_MS = 100;
 
 type LiveSnapshotAnimation = {
   from: Planes[];
   to: Planes[];
   fromTime: string;
   toTime: string;
+  startedAt: number;
 };
 
 function getSnapshotAnimationDuration(fromTime: string, toTime: string) {
   const duration = new Date(toTime).getTime() - new Date(fromTime).getTime();
   return duration > 0 ? duration : SNAPSHOT_ANIMATION_FALLBACK_MS;
+}
+
+function getBearing(from: Planes, to: Planes) {
+  const fromLat = (from.latitude * Math.PI) / 180;
+  const toLat = (to.latitude * Math.PI) / 180;
+  const deltaLon = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+  const y = Math.sin(deltaLon) * Math.cos(toLat);
+  const x =
+    Math.cos(fromLat) * Math.sin(toLat) -
+    Math.sin(fromLat) * Math.cos(toLat) * Math.cos(deltaLon);
+
+  return (Math.atan2(y, x) * 180) / Math.PI;
 }
 
 function interpolatePlanes(
@@ -57,7 +72,7 @@ function interpolatePlanes(
         plane.latitude + (target.latitude - plane.latitude) * progress,
       longitude:
         plane.longitude + (target.longitude - plane.longitude) * progress,
-      heading: target.heading,
+      heading: getBearing(plane, target),
       groundSpeed: target.groundSpeed,
     };
   });
@@ -197,6 +212,7 @@ export default function Dashboard() {
           to,
           fromTime: fromSnapshot.snapshotTime,
           toTime: toSnapshot.snapshotTime,
+          startedAt: Date.now(),
         });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -294,7 +310,7 @@ export default function Dashboard() {
 
     const interval = window.setInterval(() => {
       setAnimationNow(Date.now());
-    }, 1000);
+    }, SNAPSHOT_ANIMATION_TICK_MS);
 
     return () => {
       window.clearInterval(interval);
@@ -346,9 +362,8 @@ export default function Dashboard() {
       liveSnapshotAnimation.fromTime,
       liveSnapshotAnimation.toTime,
     );
-    const animationStart = new Date(liveSnapshotAnimation.toTime).getTime();
     const progress = Math.min(
-      Math.max((animationNow - animationStart) / duration, 0),
+      Math.max((animationNow - liveSnapshotAnimation.startedAt) / duration, 0),
       1,
     );
 
