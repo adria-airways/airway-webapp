@@ -18,6 +18,7 @@ import {
   type Planes,
   type PlaneRoute,
   type Snapshot,
+  getNearbyPlanes,
 } from "../lib/planeApi";
 
 import { type FilterData } from "./filter";
@@ -84,14 +85,12 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
-      
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -122,10 +121,10 @@ export default function Dashboard() {
   const [animationNow, setAnimationNow] = useState(() => Date.now());
   const [userLocation, setUserLocation] = useState<{lat: number; lon: number} | null>(null);
   const [isLocationFilterActive, setIsLocationFilterActive] = useState(false);
+  const [nearbyPlanes, setNearbyPlanes] = useState<Set<string>>(new Set());
 
   const snapshotPlaneCache = useRef<Record<number, Planes[]>>({});
   const liveSnapshotPairKey = useRef<string | null>(null);
-  const maxRadiusKm = 30;
 
   const loadSnapshotPlanes = useCallback(
     async (token: string, snapshot: Snapshot, signal?: AbortSignal) => {
@@ -178,6 +177,44 @@ export default function Dashboard() {
       clearInterval(interval);
     };
   }, [getToken, mode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if(!isLocationFilterActive || !userLocation){
+      return;
+    }
+
+    const currLon = userLocation.lon;
+    const currLat = userLocation.lat;
+
+    async function fetchNearby(){
+      try{
+        const token = await getToken();
+        if(!token || cancelled) return;
+
+        const responseData = await getNearbyPlanes(token, {
+          longitude: currLon,
+          latitude: currLat,
+          radius: 30
+        });
+
+        const normalized = normalizeLivePlanes(responseData);
+        const hexSet = new Set(normalized.map((plane: any) => plane.hex));
+
+        setNearbyPlanes(hexSet);
+      } catch(error){
+        console.error("Nearby planes error:", error);
+      }
+    }
+
+    fetchNearby();
+    const interval = setInterval(fetchNearby, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [getToken, isLocationFilterActive, userLocation]);
 
   // Load Timelines/Snapshots
   useEffect(() => {
@@ -427,15 +464,16 @@ export default function Dashboard() {
 
   // Process Dataset Calculations down past location bounds thresholds
   const filteredPlanes = visiblePlanes.filter((plane) => {
-    if (isLocationFilterActive && userLocation) {
-      const userLat = userLocation.lat as number;
-      const userLon = userLocation.lon as number;
-      const planeLat = plane.latitude as number;
-      const planeLon = plane.longitude as number;
+    if(isLocationFilterActive && userLocation){
+      const isNearbyNow = nearbyPlanes.has(plane.hex);
+      
+      const visualDistance = getDistanceKm(userLocation.lat, userLocation.lon, plane.latitude, plane.longitude);
 
-      const distance = getDistanceKm(userLat, userLon, planeLat, planeLon);
-
-      if (distance > maxRadiusKm) return false;
+      if(isNearbyNow){
+        if(visualDistance > 45) return false;
+      } else {
+        if(visualDistance > 30) return false;
+      }
     }
 
     if (activeFilters.callsign) {

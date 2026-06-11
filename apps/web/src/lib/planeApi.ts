@@ -14,6 +14,12 @@ export interface Planes {
   flyingToCountry?: string | null;
 }
 
+export interface LocationQuery{
+  latitude: number;
+  longitude: number;
+  radius: number;
+}
+
 export interface PlaneRoute {
   hex: string;
   callsign: string;
@@ -84,6 +90,14 @@ async function fetchApi<T>(
 
 export function getPlaneLocations(token: string) {
   return fetchApi<any>("/api/planes/app/live", token);
+}
+
+export function getNearbyPlanes(token: string, coords: LocationQuery){
+  const radius = Math.floor(coords.radius * 1000).toString();
+  const lon = coords.longitude;
+  const lat = coords.latitude;
+
+  return fetchApi<any>(`/api/planes/app/nearby?latitude=${lat}&longitude=${lon}&radius=${radius}`, token);
 }
 
 export function getSnapshots(token: string) {
